@@ -812,7 +812,7 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
                                 rows={3}
-                                className="w-full border border-orange-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
+                                className="w-full border border-orange-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none dark:bg-stone-800 dark:border-orange-500 dark:text-stone-200"
                                 autoFocus
                               />
                               <div className="flex gap-2 mt-1">
@@ -1715,7 +1715,7 @@ export default function App() {
                   onChange={(e) => setNewVenueInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') addVenuePreset(); }}
                   placeholder="Yeni məkan əlavə et (məs. Nargile Club)"
-                  className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 dark:border-stone-700"
+                  className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder-stone-500"
                 />
                 <button onClick={addVenuePreset} disabled={!newVenueInput.trim()} className="bg-stone-900 text-white rounded-lg px-3 py-2 text-sm flex items-center gap-1 hover:bg-stone-800 disabled:opacity-40">
                   <Plus size={14} /> Əlavə et
@@ -1860,7 +1860,7 @@ export default function App() {
                     <input value={newCat} onChange={(e) => setNewCat(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') addCategory(); }}
                       placeholder="Yeni kateqoriya (məs. Şirniyyat)"
-                      className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 dark:border-stone-700" />
+                      className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder-stone-500" />
                     <button onClick={addCategory} className="bg-stone-900 text-white rounded-lg px-3 py-2 text-sm flex items-center gap-1 hover:bg-stone-800">
                       <Plus size={14} /> Əlavə et
                     </button>
@@ -1948,7 +1948,7 @@ export default function App() {
                   onChange={(e) => setCaptionGuide(e.target.value)}
                   rows={4}
                   placeholder={'1. Çiyələk və matça — bir-birini tamamlayan dadların ən gözəl nümunəsi. 🍓🍵\nVista-da bu harmoniyanı hiss edin. ✨\n\n2. Hər fincanın arxasında peşəkarlıq dayanır. ☕🤍\nChemex ilə hazırlanmış qəhvələrimizi sınayın.'}
-                  className="w-full border border-stone-200 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none dark:border-stone-700"
+                  className="w-full border border-stone-200 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder-stone-500"
                 />
               </div>
 
@@ -2032,7 +2032,7 @@ export default function App() {
               </p>
               <textarea value={captionsRaw} onChange={(e) => setCaptionsRaw(e.target.value)} rows={12}
                 placeholder={'1. Şəhərin ən gözəl mənzərəsi burada 🌆\n2. Səhərə qəhvə ilə başlamağın əsl adı budur ☕'}
-                className="w-full border border-stone-200 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-300 dark:border-stone-700" />
+                className="w-full border border-stone-200 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder-stone-500" />
             </div>
 
             {photos.length > 0 && (
@@ -2087,14 +2087,14 @@ export default function App() {
                 <div>
                   <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">Ay</label>
                   <select value={monthIndex} onChange={(e) => setMonthIndex(parseInt(e.target.value))}
-                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm dark:border-stone-700">
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200">
                     {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">İl</label>
                   <input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value) || year)}
-                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-24 dark:border-stone-700" />
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-24 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
                 </div>
                 <button onClick={generateSchedule} disabled={photos.length === 0}
                   className="bg-stone-900 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-stone-800 disabled:opacity-50">
