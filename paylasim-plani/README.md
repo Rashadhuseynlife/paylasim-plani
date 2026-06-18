@@ -35,6 +35,8 @@ Worker-də `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` secret-lərin
 
 ## Lokal işlətmək (development)
 
+.
+
 ```bash
 npm install
 npm run dev
