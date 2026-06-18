@@ -985,22 +985,24 @@ export default function App() {
         files.map(async (file) => {
           const dataUrl = await readFileAsDataURL(file);
           const thumb = await resizeDataURL(dataUrl, 480);
-          // Əvvəlcə fayl adının (uzantısız) tam ədəd olub-olmadığına baxırıq;
-          // olmasa, adda rast gəlinən ilk ədəd sırasından istifadə edirik.
-          const baseName = file.name.replace(/\.[^.]+$/, '');
-          const exactMatch = baseName.match(/^\d+$/);
-          const numMatch = exactMatch ? exactMatch : file.name.match(/(\d+)/);
-          const number = numMatch ? parseInt(numMatch[0], 10) : null;
           return {
             id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
             filename: file.name,
-            number,
+            number: null, // Müvəqqəti null — aşağıda ardıcıl nömrə veriləcək
             dataUrl: thumb,
             category: '',
           };
         })
       );
-      setPhotos((prev) => [...prev, ...newPhotos].sort((a, b) => (a.number ?? 1e9) - (b.number ?? 1e9)));
+
+      setPhotos((prev) => {
+        // Mövcud şəkillərin ən böyük nömrəsini tap
+        const maxNum = prev.reduce((m, p) => Math.max(m, p.number ?? 0), 0);
+        // Yeni şəkillərə ardıcıl nömrə ver
+        const numbered = newPhotos.map((p, i) => ({ ...p, number: maxNum + i + 1 }));
+        return [...prev, ...numbered];
+      });
+
       setSchedule(null);
       addToast(`${newPhotos.length} şəkil yükləndi`, 'success');
     } catch {
