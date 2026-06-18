@@ -1356,16 +1356,9 @@ export default function App() {
 
     const lines = photos
       .filter((p) => p.number != null && aiCaptions.has(p.number))
-      // Carousel üzvlərindən yalnız cover-i saxla
       .filter((p) => !carouselNumberSet.has(p.number) || coverNumbers.has(p.number))
       .sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
-      .map((p) => {
-        const isCarouselCover = coverNumbers.has(p.number);
-        const label = isCarouselCover
-          ? `${p.number}. [Karusel] ${aiCaptions.get(p.number)}`
-          : `${p.number}. ${aiCaptions.get(p.number)}`;
-        return label;
-      })
+      .map((p) => `${p.number}. ${aiCaptions.get(p.number)}`)
       .join('\n\n');
     try {
       await navigator.clipboard.writeText(lines);
@@ -1386,12 +1379,7 @@ export default function App() {
       .filter((p) => p.number != null && aiCaptions.has(p.number))
       .filter((p) => !carouselNumberSet.has(p.number) || coverNumbers.has(p.number))
       .sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
-      .map((p) => {
-        const isCarouselCover = coverNumbers.has(p.number);
-        return isCarouselCover
-          ? `${p.number}. [Karusel] ${aiCaptions.get(p.number)}`
-          : `${p.number}. ${aiCaptions.get(p.number)}`;
-      })
+      .map((p) => `${p.number}. ${aiCaptions.get(p.number)}`)
       .join('\n\n');
     if (!lines) return;
     setCaptionsRaw(lines);
@@ -1942,47 +1930,95 @@ export default function App() {
                   </div>
                   {categorizedCount > 0 && <p className="text-sm text-stone-500 mb-3 dark:text-stone-400">{categorizedCount}/{photos.length} şəkil kateqoriyalandı.</p>}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    {photos.map((p) => {
-                      // Parse existing dual category
-                      const parts = p.category ? p.category.split(' / ') : ['', ''];
-                      const cat1 = parts[0] || '';
-                      const cat2 = parts[1] || '';
-                      return (
-                        <div key={p.id} className="flex items-center gap-3 border border-stone-200 rounded-xl p-2 dark:border-stone-700">
-                          <img src={p.dataUrl} alt={p.filename} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-stone-500 truncate dark:text-stone-400">{p.filename}</p>
-                            <select value={cat1} onChange={(e) => {
-                              const newCat = e.target.value;
-                              if (!newCat) {
-                                // Əsas kateqoriya boşaldıldı: 2ci kateqoriya varsa, o, əsas olur;
-                                // yoxsa hamısı boşaldılır. (Əvvəlcə bu, " / Cat2" kimi yarımçıq
-                                // sətir yaradırdı.)
-                                setPhotoCategory(p.id, cat2 || '');
-                              } else {
-                                setPhotoCategory(p.id, cat2 && cat2 !== newCat ? `${newCat} / ${cat2}` : newCat);
-                              }
-                            }}
-                              className="w-full mt-1 text-sm border border-stone-200 rounded-md px-1.5 py-1 bg-white dark:bg-stone-900 dark:border-stone-700">
-                              <option value="">— 1ci kateqoriya —</option>
-                              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                              <option value="Digər">Digər</option>
-                            </select>
-                            {cat1 && (
-                              <select value={cat2} onChange={(e) => {
-                                const newCat2 = e.target.value;
-                                setPhotoCategory(p.id, newCat2 && newCat2 !== cat1 ? `${cat1} / ${newCat2}` : cat1);
-                              }}
-                                className="w-full mt-1 text-xs border border-stone-100 rounded-md px-1.5 py-1 bg-stone-50 text-stone-500 dark:bg-stone-950 dark:text-stone-400">
-                                <option value="">+ 2ci kateqoriya (istəyə bağlı)</option>
-                                {categories.filter(c => c !== cat1).map((c) => <option key={c} value={c}>{c}</option>)}
-                                {cat1 !== 'Digər' && <option value="Digər">Digər</option>}
-                              </select>
+                    {(() => {
+                      // Carousel üzvlərini qruplaşdır — bir kart kimi göstər
+                      const carouselNumberSet = new Set(carousels.flatMap((c) => c.numbers));
+                      const processedNumbers = new Set();
+                      const items = [];
+
+                      // Əvvəlcə carousel qruplarını əlavə et
+                      carousels.forEach((c) => {
+                        const members = c.numbers
+                          .map((n) => photos.find((p) => p.number === n))
+                          .filter(Boolean)
+                          .sort((a, b) => a.number - b.number);
+                        if (members.length === 0) return;
+                        members.forEach((m) => processedNumbers.add(m.number));
+                        items.push({ type: 'carousel', members, cover: members[0] });
+                      });
+
+                      // Sonra tək şəkilləri əlavə et
+                      photos.forEach((p) => {
+                        if (p.number != null && processedNumbers.has(p.number)) return;
+                        items.push({ type: 'single', members: [p], cover: p });
+                      });
+
+                      return items.map((item) => {
+                        const p = item.cover;
+                        const parts = p.category ? p.category.split(' / ') : ['', ''];
+                        const cat1 = parts[0] || '';
+                        const cat2 = parts[1] || '';
+
+                        return (
+                          <div key={item.type === 'carousel' ? `carousel-${item.members.map(m => m.number).join('-')}` : p.id}
+                            className="flex items-center gap-3 border border-stone-200 rounded-xl p-2 dark:border-stone-700">
+                            {/* Şəkil(lər) */}
+                            {item.type === 'carousel' ? (
+                              <div className="relative flex-shrink-0 w-12 h-12">
+                                {item.members.slice(0, 3).map((m, idx) => (
+                                  <img key={m.id} src={m.dataUrl} alt={m.filename}
+                                    className="absolute w-10 h-10 rounded-lg object-cover border-2 border-white dark:border-stone-800"
+                                    style={{ left: idx * 6, top: idx * 6, zIndex: 10 - idx }} />
+                                ))}
+                                <div className="absolute bottom-0 right-0 bg-stone-900 text-white text-[9px] rounded-full px-1 py-0.5 z-20 flex items-center gap-0.5">
+                                  <Layers size={8} /> {item.members.length}
+                                </div>
+                              </div>
+                            ) : (
+                              <img src={p.dataUrl} alt={p.filename} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
                             )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-stone-500 truncate dark:text-stone-400">
+                                {item.type === 'carousel'
+                                  ? `Karusel: ${item.members.map(m => m.filename).join(', ')}`
+                                  : p.filename}
+                              </p>
+                              <select value={cat1} onChange={(e) => {
+                                const newCat = e.target.value;
+                                // Carousel üçün bütün üzvlərə eyni kateqoriyanı tətbiq et
+                                const applyTo = item.type === 'carousel' ? item.members : [p];
+                                applyTo.forEach((m) => {
+                                  if (!newCat) {
+                                    setPhotoCategory(m.id, cat2 || '');
+                                  } else {
+                                    setPhotoCategory(m.id, cat2 && cat2 !== newCat ? `${newCat} / ${cat2}` : newCat);
+                                  }
+                                });
+                              }}
+                                className="w-full mt-1 text-sm border border-stone-200 rounded-md px-1.5 py-1 bg-white dark:bg-stone-900 dark:border-stone-700 dark:text-stone-200">
+                                <option value="">— 1ci kateqoriya —</option>
+                                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                                <option value="Digər">Digər</option>
+                              </select>
+                              {cat1 && (
+                                <select value={cat2} onChange={(e) => {
+                                  const newCat2 = e.target.value;
+                                  const applyTo = item.type === 'carousel' ? item.members : [p];
+                                  applyTo.forEach((m) => {
+                                    setPhotoCategory(m.id, newCat2 && newCat2 !== cat1 ? `${cat1} / ${newCat2}` : cat1);
+                                  });
+                                }}
+                                  className="w-full mt-1 text-xs border border-stone-100 rounded-md px-1.5 py-1 bg-stone-50 text-stone-500 dark:bg-stone-950 dark:text-stone-400 dark:border-stone-700">
+                                  <option value="">+ 2ci kateqoriya (istəyə bağlı)</option>
+                                  {categories.filter(c => c !== cat1).map((c) => <option key={c} value={c}>{c}</option>)}
+                                  {cat1 !== 'Digər' && <option value="Digər">Digər</option>}
+                                </select>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               </>
