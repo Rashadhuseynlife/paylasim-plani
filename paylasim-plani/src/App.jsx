@@ -1263,20 +1263,51 @@ export default function App() {
       ? `\n\nNümunə üslub (bu cür yaz):\n${captionGuide.trim()}`
       : '';
 
-    const photoList = [...photos];
-    setCaptionGenProgress({ done: 0, total: photoList.length });
+    // Carousel üzvlərini qruplaşdır — hər carousel bir "iş vahidi"dir
+    const carouselNumberSet = new Set(carousels.flatMap((c) => c.numbers));
+    const carouselMap = new Map(); // cover number → carousel member photos[]
+    carousels.forEach((c) => {
+      const members = c.numbers
+        .map((n) => photos.find((p) => p.number === n))
+        .filter(Boolean)
+        .sort((a, b) => a.number - b.number);
+      if (members.length > 0) carouselMap.set(members[0].number, members);
+    });
+
+    // İş siyahısı: ya tək şəkil, ya carousel (bir caption)
+    const workItems = [];
+    photos.forEach((p) => {
+      if (p.number == null) return;
+      if (carouselNumberSet.has(p.number)) {
+        // Yalnız cover şəkil üçün bir iş əlavə et
+        if (carouselMap.has(p.number)) {
+          workItems.push({ type: 'carousel', cover: p, members: carouselMap.get(p.number) });
+        }
+        // Digər carousel üzvlərini keç
+      } else {
+        workItems.push({ type: 'single', cover: p, members: [p] });
+      }
+    });
+
+    setCaptionGenProgress({ done: 0, total: workItems.length });
     const resultMap = new Map(aiCaptions);
     let captionDoneCount = 0;
     let hadError = false;
 
-    const fetchCaption = async (p) => {
+    const fetchCaption = async (item) => {
       try {
+        const isCarousel = item.type === 'carousel';
+        const userText = isCarousel
+          ? `Bu ${item.members.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz. Məkan: "${venueRef}". Bütün şəkillər birlikdə paylaşılacaq. 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}`
+          : `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}`;
+
         const text = await callAIWithFallback({
           primaryProvider: aiProvider,
           aiSettings,
           onFallback: (from, to) => addToast(`⚡ ${from} limiti → ${to}-ə keçildi`, 'info'),
-          userText: `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}`,
-          imageBase64: p.dataUrl.split(',')[1],
+          userText,
+          // Cover şəkilini göndər (carousel üçün ilk şəkil)
+          imageBase64: item.cover.dataUrl.split(',')[1],
           maxTokens: 250,
         });
         return text || null;
@@ -1287,33 +1318,54 @@ export default function App() {
     };
 
     const CONCURRENCY = 3;
-    for (let i = 0; i < photoList.length; i += CONCURRENCY) {
-      const chunk = photoList.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map((p) => fetchCaption(p)));
+    for (let i = 0; i < workItems.length; i += CONCURRENCY) {
+      const chunk = workItems.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(chunk.map((item) => fetchCaption(item)));
       results.forEach((caption, idx) => {
-        const p = chunk[idx];
+        const item = chunk[idx];
         if (caption === null) {
-          // AI-dan cavab gəlmədi — real xəta
           hadError = true;
-        } else if (p.number != null) {
-          resultMap.set(p.number, caption);
+        } else {
+          // Carousel üçün yalnız cover-in nömrəsinə caption yaz
+          // (digər üzvlər boş qalır — plan zamanı cover caption-ı istifadə edir)
+          resultMap.set(item.cover.number, caption);
+          // Carousel üzvlərinin caption-larını sil ki, qarışıqlıq olmasın
+          if (item.type === 'carousel') {
+            item.members.forEach((m) => {
+              if (m.number !== item.cover.number) resultMap.delete(m.number);
+            });
+          }
         }
-        // p.number == null olarsa (faylda rəqəm yoxdur) — bu xəta deyil, sadəcə skip et
         captionDoneCount++;
       });
       setAiCaptions(new Map(resultMap));
-      setCaptionGenProgress({ done: captionDoneCount, total: photoList.length });
+      setCaptionGenProgress({ done: captionDoneCount, total: workItems.length });
     }
 
     setCaptionGenLoading(false);
     if (hadError) addToast('Bəzi şəkillər üçün caption yazıla bilmədi', 'error');
     else addToast(`${resultMap.size} caption hazırlandı! ✓`, 'success');
-  }, [photos, captionGuide, aiCaptions, venueName, aiProvider, aiSettings, addToast]);
+  }, [photos, carousels, captionGuide, aiCaptions, venueName, aiProvider, aiSettings, addToast]);
 
   const copyAllAiCaptions = useCallback(async () => {
+    const carouselNumberSet = new Set(carousels.flatMap((c) => c.numbers));
+    const coverNumbers = new Set(carousels.map((c) => {
+      const members = c.numbers.map((n) => photos.find((p) => p.number === n)).filter(Boolean).sort((a, b) => a.number - b.number);
+      return members[0]?.number;
+    }).filter(Boolean));
+
     const lines = photos
       .filter((p) => p.number != null && aiCaptions.has(p.number))
-      .map((p) => `${p.number}. ${aiCaptions.get(p.number)}`)
+      // Carousel üzvlərindən yalnız cover-i saxla
+      .filter((p) => !carouselNumberSet.has(p.number) || coverNumbers.has(p.number))
+      .sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
+      .map((p) => {
+        const isCarouselCover = coverNumbers.has(p.number);
+        const label = isCarouselCover
+          ? `${p.number}. [Karusel] ${aiCaptions.get(p.number)}`
+          : `${p.number}. ${aiCaptions.get(p.number)}`;
+        return label;
+      })
       .join('\n\n');
     try {
       await navigator.clipboard.writeText(lines);
@@ -1321,18 +1373,30 @@ export default function App() {
     } catch {
       addToast('Kopyalama alınmadı', 'error');
     }
-  }, [photos, aiCaptions, addToast]);
+  }, [photos, carousels, aiCaptions, addToast]);
 
   const addAllAiCaptionsToPaste = useCallback(() => {
+    const carouselNumberSet = new Set(carousels.flatMap((c) => c.numbers));
+    const coverNumbers = new Set(carousels.map((c) => {
+      const members = c.numbers.map((n) => photos.find((p) => p.number === n)).filter(Boolean).sort((a, b) => a.number - b.number);
+      return members[0]?.number;
+    }).filter(Boolean));
+
     const lines = photos
       .filter((p) => p.number != null && aiCaptions.has(p.number))
+      .filter((p) => !carouselNumberSet.has(p.number) || coverNumbers.has(p.number))
       .sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
-      .map((p) => `${p.number}. ${aiCaptions.get(p.number)}`)
+      .map((p) => {
+        const isCarouselCover = coverNumbers.has(p.number);
+        return isCarouselCover
+          ? `${p.number}. [Karusel] ${aiCaptions.get(p.number)}`
+          : `${p.number}. ${aiCaptions.get(p.number)}`;
+      })
       .join('\n\n');
     if (!lines) return;
     setCaptionsRaw(lines);
     addToast('Bütün captionlar paste bölməsinə əlavə edildi', 'success');
-  }, [photos, aiCaptions, addToast]);
+  }, [photos, carousels, aiCaptions, addToast]);
 
   const regenOneCaption = useCallback(async (photo) => {
     if (photo.number == null) return;
