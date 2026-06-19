@@ -878,6 +878,8 @@ export default function App() {
   const [captionsRaw, setCaptionsRaw] = useState('');
   const [monthIndex, setMonthIndex] = useState(5);
   const [year, setYear] = useState(2026);
+  // Rus dili tərcüməsi — aktiv olanda hər caption AZ + RU formatında yazılır
+  const [includeRussian, setIncludeRussian] = useState(false);
   const [schedule, setSchedule] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiProgress, setAiProgress] = useState({ done: 0, total: 0 });
@@ -1044,6 +1046,15 @@ export default function App() {
 
   const setPhotoCategory = useCallback((id, cat) => {
     setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, category: cat } : p)));
+  }, []);
+
+  // Məhsul adı və şəxs adı — isteğe bağlı, caption generasiyasında istifadə olunur
+  const setPhotoProductName = useCallback((id, name) => {
+    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, productName: name } : p)));
+  }, []);
+
+  const setPhotoPersonName = useCallback((id, name) => {
+    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, personName: name } : p)));
   }, []);
 
   const togglePhotoSelect = useCallback((number) => {
@@ -1299,9 +1310,26 @@ export default function App() {
     const fetchCaption = async (item) => {
       try {
         const isCarousel = item.type === 'carousel';
+
+        // Məhsul adı / Şəxs adı — carousel-də hər hansı üzvdə varsa, istifadə et
+        const productNames = [...new Set(item.members.map((m) => m.productName?.trim()).filter(Boolean))];
+        const personNames = [...new Set(item.members.map((m) => m.personName?.trim()).filter(Boolean))];
+
+        let extraInfo = '';
+        if (productNames.length > 0) {
+          extraInfo += `\nMəhsulun adı: ${productNames.join(', ')}. Bu adı captionda təbii şəkildə istifadə et.`;
+        }
+        if (personNames.length > 0) {
+          extraInfo += `\nŞəkildəki şəxs(lər): ${personNames.join(', ')}. Bu ad(lar)ı captionda təbii şəkildə istifadə et.`;
+        }
+
+        const russianSection = includeRussian
+          ? `\n\nMÜHÜM: Captionu əvvəlcə Azərbaycan dilində yaz, sonra İKİ boş sətirdən sonra HƏMİN MƏTNİN rus dilinə tərcüməsini yaz. Format belə olsun:\n[Azərbaycan dilində caption]\n\n[Rus dilində tərcümə]\nBaşqa heç bir başlıq və ya izahat əlavə etmə, yalnız bu iki bloku yaz.`
+          : '';
+
         const userText = isCarousel
-          ? `Bu ${item.members.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz. Məkan: "${venueRef}". Bütün şəkillər birlikdə paylaşılacaq. 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}`
-          : `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}`;
+          ? `Bu ${item.members.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz. Məkan: "${venueRef}". Bütün şəkillər birlikdə paylaşılacaq. 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${russianSection}`
+          : `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${russianSection}`;
 
         const text = await callAIWithFallback({
           primaryProvider: aiProvider,
@@ -1310,7 +1338,7 @@ export default function App() {
           userText,
           // Cover şəkilini göndər (carousel üçün ilk şəkil)
           imageBase64: item.cover.dataUrl.split(',')[1],
-          maxTokens: 250,
+          maxTokens: includeRussian ? 450 : 250,
         });
         return text || null;
       } catch (e) {
@@ -1347,7 +1375,7 @@ export default function App() {
     setCaptionGenLoading(false);
     if (hadError) addToast('Bəzi şəkillər üçün caption yazıla bilmədi', 'error');
     else addToast(`${resultMap.size} caption hazırlandı! ✓`, 'success');
-  }, [photos, carousels, captionGuide, aiCaptions, venueName, aiProvider, aiSettings, addToast]);
+  }, [photos, carousels, captionGuide, aiCaptions, venueName, aiProvider, aiSettings, addToast, includeRussian]);
 
   const copyAllAiCaptions = useCallback(async () => {
     const carouselNumberSet = new Set(carousels.flatMap((c) => c.numbers));
@@ -1739,6 +1767,15 @@ export default function App() {
               : <span className="text-emerald-600 dark:text-emerald-400 font-medium">⚡ Açarlar Cloudflare Worker-də saxlanılır. Limit olduqda avtomatik yedəyə keçər.</span>
             }
           </span>
+          <label className="flex items-center gap-2 text-xs font-medium text-stone-600 dark:text-stone-300 cursor-pointer border-t border-stone-100 dark:border-stone-700 w-full pt-3 mt-1">
+            <input
+              type="checkbox"
+              checked={includeRussian}
+              onChange={(e) => setIncludeRussian(e.target.checked)}
+              className="rounded border-stone-300 dark:border-stone-600 text-orange-600 focus:ring-orange-400"
+            />
+            🇷🇺 Rus dili tərcüməsini caption-a əlavə et (AZ + RU bir caption-da)
+          </label>
         </div>
 
         {/* ---- TAB 1: PHOTOS ---- */}
@@ -2016,6 +2053,27 @@ export default function App() {
                                   {cat1 !== 'Digər' && <option value="Digər">Digər</option>}
                                 </select>
                               )}
+                              {/* Məhsul adı və Şəxs adı — isteğe bağlı, caption generasiyasında istifadə olunur */}
+                              <input
+                                type="text"
+                                value={p.productName || ''}
+                                onChange={(e) => {
+                                  const applyTo = item.type === 'carousel' ? item.members : [p];
+                                  applyTo.forEach((m) => setPhotoProductName(m.id, e.target.value));
+                                }}
+                                placeholder="Məhsul adı (məs. Strawberry Cheesecake)"
+                                className="w-full mt-1 text-xs border border-stone-100 rounded-md px-1.5 py-1 bg-white text-stone-600 placeholder-stone-400 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-700 dark:placeholder-stone-500"
+                              />
+                              <input
+                                type="text"
+                                value={p.personName || ''}
+                                onChange={(e) => {
+                                  const applyTo = item.type === 'carousel' ? item.members : [p];
+                                  applyTo.forEach((m) => setPhotoPersonName(m.id, e.target.value));
+                                }}
+                                placeholder="Şəxs adı (məs. DJ Vugarixx)"
+                                className="w-full mt-1 text-xs border border-stone-100 rounded-md px-1.5 py-1 bg-white text-stone-600 placeholder-stone-400 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-700 dark:placeholder-stone-500"
+                              />
                             </div>
                           </div>
                         );
