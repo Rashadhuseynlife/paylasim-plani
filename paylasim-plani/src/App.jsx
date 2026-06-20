@@ -4,6 +4,8 @@ import {
   AlertCircle, Check, Calendar, Layers, Unlink, CheckCircle2, Circle,
   RotateCcw, FileText, XCircle, Info, Sun, Moon,
 } from 'lucide-react';
+import fabrikaDarkLogo from './assets/fabrika-dark.svg';
+import fabrikaLightLogo from './assets/fabrika-light.svg';
 
 /* ====================================================================
    İNTERFEYS TƏRCÜMƏ LÜĞƏTİ (AZ / RU)
@@ -703,6 +705,31 @@ async function callAIWithFallback({ primaryProvider, aiSettings, onFallback, ...
 /* ---------------------------------------------------------------- */
 /* Sub-components                                                     */
 /* ---------------------------------------------------------------- */
+
+function RussianFlag({ className = '' }) {
+  return (
+    <svg width="14" height="10" viewBox="0 0 21 14" className={`flex-shrink-0 rounded-sm ${className}`} style={{ display: 'inline-block' }}>
+      <rect width="21" height="14" fill="#fff" />
+      <rect y="4.66" width="21" height="4.66" fill="#0039A6" />
+      <rect y="9.33" width="21" height="4.67" fill="#D52B1E" />
+    </svg>
+  );
+}
+
+function AzerbaijanFlag({ className = '' }) {
+  return (
+    <svg width="14" height="10" viewBox="0 0 21 14" className={`flex-shrink-0 rounded-sm ${className}`} style={{ display: 'inline-block' }}>
+      <rect width="21" height="14" fill="#3F9C35" />
+      <rect y="4.66" width="21" height="4.66" fill="#ED2939" />
+      <rect y="9.33" width="21" height="4.67" fill="#00B9E4" />
+      <circle cx="11" cy="7" r="2.3" fill="#fff" />
+      <circle cx="11.7" cy="7" r="1.9" fill="#ED2939" />
+      <g fill="#fff">
+        <polygon points="13.2,5.3 13.6,6.2 14.6,6.2 13.8,6.8 14.1,7.7 13.2,7.1 12.4,7.7 12.7,6.8 11.9,6.2 12.9,6.2" />
+      </g>
+    </svg>
+  );
+}
 
 function EmptyState({ text }) {
   return (
@@ -1547,7 +1574,7 @@ export default function App() {
     setCaptionGenLoading(true);
     const venueRef = venueName.trim() || 'bizim kafemiz';
     const guideSection = captionGuide.trim()
-      ? `\n\nNümunə üslub (bu cür yaz):\n${captionGuide.trim()}`
+      ? `\n\nNümunə üslub (bu cür yaz, amma cümlələri hərfi-hərfinə təkrarlama):\n${captionGuide.trim()}`
       : '';
 
     // Carousel üzvlərini qruplaşdır — hər carousel bir "iş vahidi"dir
@@ -1581,7 +1608,20 @@ export default function App() {
     let captionDoneCount = 0;
     let hadError = false;
 
-    const fetchCaption = async (item) => {
+    // Bu çağırış daxilində artıq yazılmış caption-ların başlanğıc hissələrini
+    // (ilk 6-8 söz) izləyirik — AI-a "bunları təkrarlama" deyə göstəririk ki,
+    // "Vista-da..." kimi eyni qəlibdən çoxlu caption yaranmasın.
+    const usedOpenings = [];
+    const CTA_STYLES = [
+      'sual ver (məs. "Bunu sınamısınız?")',
+      'birbaşa dəvət et (məs. "Gəlin görüşək")',
+      'duyğu/atmosfer təsviri ilə başla (heç bir CTA sözü olmadan)',
+      'qısa bir fakt və ya iddia ilə başla',
+      'emoji ilə açılan qısa bir ifadə ilə başla',
+      'müştərinin təcrübəsini təsvir edərək başla ("Hər dəfə... ")',
+    ];
+
+    const fetchCaption = async (item, idx) => {
       try {
         const isCarousel = item.type === 'carousel';
 
@@ -1598,12 +1638,21 @@ export default function App() {
         }
 
         const russianSection = includeRussian
-          ? `\n\nMÜHÜM: Captionu əvvəlcə Azərbaycan dilində yaz, sonra İKİ boş sətirdən sonra HƏMİN MƏTNİN rus dilinə tərcüməsini yaz. Format belə olsun:\n[Azərbaycan dilində caption]\n\n[Rus dilində tərcümə]\nBaşqa heç bir başlıq və ya izahat əlavə etmə, yalnız bu iki bloku yaz.`
+          ? `\n\nMÜHÜM: Captionu əvvəlcə Azərbaycan dilində yaz. Sonra İKİ boş sətirdən sonra, ayrıca bir sətirdə YALNIZ 🇷🇺 emojisini yaz, sonra YENİ sətirdə həmin mətnin rus dilinə tərcüməsini yaz. Format dəqiq belə olsun (sətr sonlarına diqqət et):\n[Azərbaycan dilində caption]\n\n🇷🇺\n[Rus dilində tərcümə]\nBaşqa heç bir başlıq, izahat və ya əlavə mətn yazma — yalnız bu üç hissəni (AZ mətn, 🇷🇺, RU mətn) yaz.`
           : '';
 
+        // Təkrarçılığı önləmək üçün: əvvəlki başlanğıclar siyahısı + bu caption
+        // üçün təyin olunmuş üslub göstərişi.
+        const ctaStyle = CTA_STYLES[idx % CTA_STYLES.length];
+        const varietySection = usedOpenings.length > 0
+          ? `\n\nÇOX VACİB: Bu caption "${venueRef}" sözü ilə BAŞLAMASIN (artıq ${usedOpenings.length} caption "${venueRef}-da/də" ilə başlayıb, təkrar olmasın). Bu captionun açılış cümləsi: ${ctaStyle}. Əvvəlki captionların başlanğıcları: ${usedOpenings.map((o) => `"${o}..."`).join(', ')} — bunlardan fərqli bir cümlə qurusu istifadə et.`
+          : `\n\nBu captionun açılış cümləsi: ${ctaStyle}.`;
+
+        const langGuard = `\n\nDİQQƏT: Mətn YALNIZ Azərbaycan dilində olmalıdır (Türkiyə türkcəsi YOX). Türk dilinə xas sözlər (məs. "çok", "güzel", "harika", "şimdi", "değil") işlətmə — onların Azərbaycanca qarşılığını yaz (məs. "çox", "gözəl", "əla", "indi", "deyil").`;
+
         const userText = isCarousel
-          ? `Bu ${item.members.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz. Məkan: "${venueRef}". Bütün şəkillər birlikdə paylaşılacaq. 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${russianSection}`
-          : `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${russianSection}`;
+          ? `Bu ${item.members.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz. Məkan: "${venueRef}". Bütün şəkillər birlikdə paylaşılacaq. 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`
+          : `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`;
 
         const text = await callAIWithFallback({
           primaryProvider: aiProvider,
@@ -1614,6 +1663,15 @@ export default function App() {
           imageBase64: item.cover.dataUrl.split(',')[1],
           maxTokens: includeRussian ? 450 : 250,
         });
+
+        if (text) {
+          // Azərbaycan hissəsinin (RU tərcüməsi varsa, ilk bloku) ilk bir neçə
+          // sözünü "açılış" kimi yadda saxlayırıq ki, sonrakı çağırışlar bunu
+          // təkrarlamasın.
+          const azPart = text.split('\n\n')[0];
+          const openingWords = azPart.trim().split(/\s+/).slice(0, 6).join(' ');
+          if (openingWords) usedOpenings.push(openingWords);
+        }
         return text || null;
       } catch (e) {
         console.error('Caption fetch error:', e);
@@ -1621,27 +1679,24 @@ export default function App() {
       }
     };
 
-    const CONCURRENCY = 3;
-    for (let i = 0; i < workItems.length; i += CONCURRENCY) {
-      const chunk = workItems.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map((item) => fetchCaption(item)));
-      results.forEach((caption, idx) => {
-        const item = chunk[idx];
-        if (caption === null) {
-          hadError = true;
-        } else {
-          // Carousel üçün yalnız cover-in nömrəsinə caption yaz
-          // (digər üzvlər boş qalır — plan zamanı cover caption-ı istifadə edir)
-          resultMap.set(item.cover.number, caption);
-          // Carousel üzvlərinin caption-larını sil ki, qarışıqlıq olmasın
-          if (item.type === 'carousel') {
-            item.members.forEach((m) => {
-              if (m.number !== item.cover.number) resultMap.delete(m.number);
-            });
-          }
+    // QEYD: əvvəlcə paralel (Promise.all) işləyirdi, amma bu, hər çağırışın
+    // əvvəlki nəticələri görməsinə mane olurdu və captionlar bir-birinə çox
+    // bənzəyirdi (məs. çoxu "Vista-da..." ilə başlayırdı). İndi ardıcıl
+    // (sequential) işləyir — hər addım əvvəlki açılışları nəzərə alır.
+    for (let i = 0; i < workItems.length; i++) {
+      const item = workItems[i];
+      const caption = await fetchCaption(item, i);
+      if (caption === null) {
+        hadError = true;
+      } else {
+        resultMap.set(item.cover.number, caption);
+        if (item.type === 'carousel') {
+          item.members.forEach((m) => {
+            if (m.number !== item.cover.number) resultMap.delete(m.number);
+          });
         }
-        captionDoneCount++;
-      });
+      }
+      captionDoneCount++;
       setAiCaptions(new Map(resultMap));
       setCaptionGenProgress({ done: captionDoneCount, total: workItems.length });
     }
@@ -1697,16 +1752,21 @@ export default function App() {
     setRegenLoadingNums((prev) => new Set([...prev, photoNum]));
     const venueRef = venueName.trim() || 'bizim kafemiz';
     const guideSection = captionGuide.trim()
-      ? `\n\nNümunə üslub (bu cür yaz):\n${captionGuide.trim()}`
+      ? `\n\nNümunə üslub (bu cür yaz, amma cümlələri hərfi-hərfinə təkrarlama):\n${captionGuide.trim()}`
       : '';
+    const langGuard = `\n\nDİQQƏT: Mətn YALNIZ Azərbaycan dilində olmalıdır (Türkiyə türkcəsi YOX). Türk dilinə xas sözlər (məs. "çok", "güzel", "harika", "şimdi", "değil") işlətmə — onların Azərbaycanca qarşılığını yaz (məs. "çox", "gözəl", "əla", "indi", "deyil").`;
+    const russianSection = includeRussian
+      ? `\n\nMÜHÜM: Captionu əvvəlcə Azərbaycan dilində yaz. Sonra İKİ boş sətirdən sonra, ayrıca bir sətirdə YALNIZ 🇷🇺 emojisini yaz, sonra YENİ sətirdə həmin mətnin rus dilinə tərcüməsini yaz. Format dəqiq belə olsun (sətr sonlarına diqqət et):\n[Azərbaycan dilində caption]\n\n🇷🇺\n[Rus dilində tərcümə]\nBaşqa heç bir başlıq, izahat və ya əlavə mətn yazma — yalnız bu üç hissəni (AZ mətn, 🇷🇺, RU mətn) yaz.`
+      : '';
+    const varietySection = `\n\nBu captionun açılış cümləsi "${venueRef}" sözü ilə BAŞLAMASIN — fərqli, orijinal bir açılış tap (sual, duyğu təsviri, qısa fakt, və ya emoji ilə açılan ifadə ola bilər).`;
     try {
       const caption = await callAIWithFallback({
         primaryProvider: aiProvider,
         aiSettings,
         onFallback: (from, to) => addToast(`⚡ ${from} limiti → ${to}-ə keçildi`, 'info'),
-        userText: `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}`,
+        userText: `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}${varietySection}${langGuard}${russianSection}`,
         imageBase64: photo.dataUrl.split(',')[1],
-        maxTokens: 250,
+        maxTokens: includeRussian ? 450 : 250,
       });
       if (caption) {
         setAiCaptions((prev) => new Map([...prev, [photoNum, caption]]));
@@ -1718,7 +1778,7 @@ export default function App() {
       addToast(`#${photoNum} yazıla bilmədi: ${err instanceof Error ? err.message : 'xəta'}`, 'error');
     }
     setRegenLoadingNums((prev) => { const n = new Set(prev); n.delete(photoNum); return n; });
-  }, [venueName, captionGuide, aiProvider, aiSettings, addToast]);
+  }, [venueName, captionGuide, aiProvider, aiSettings, addToast, includeRussian]);
 
   // Load saved plan keys, venue presets and AI config — profil dəyişəndə yenidən yüklənir
   useEffect(() => {
@@ -2056,9 +2116,9 @@ export default function App() {
             <button
               onClick={toggleUiLang}
               title="AZ / RU"
-              className="px-2.5 py-2 rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-500 dark:text-stone-300 hover:border-stone-300 dark:hover:border-stone-600 transition-colors text-xs font-semibold"
+              className="px-2.5 py-2 rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-500 dark:text-stone-300 hover:border-stone-300 dark:hover:border-stone-600 transition-colors flex items-center gap-1"
             >
-              {uiLang === 'az' ? 'RU' : 'AZ'}
+              {uiLang === 'az' ? <RussianFlag /> : <AzerbaijanFlag />}
             </button>
             <button
               onClick={toggleDarkMode}
@@ -2116,11 +2176,7 @@ export default function App() {
               onChange={(e) => setIncludeRussian(e.target.checked)}
               className="rounded border-stone-300 dark:border-stone-600 text-orange-600 focus:ring-orange-400"
             />
-            <svg width="14" height="10" viewBox="0 0 21 14" className="flex-shrink-0 rounded-sm" style={{ display: 'inline-block' }}>
-              <rect width="21" height="14" fill="#fff" />
-              <rect y="4.66" width="21" height="4.66" fill="#0039A6" />
-              <rect y="9.33" width="21" height="4.67" fill="#D52B1E" />
-            </svg>
+            <RussianFlag />
             {uiLang === 'ru' ? 'Добавить русский перевод к подписи (AZ + RU в одной подписи)' : 'Rus dili tərcüməsini caption-a əlavə et (AZ + RU bir caption-da)'}
           </label>
         </div>
@@ -2722,6 +2778,18 @@ export default function App() {
             )}
           </div>
         )}
+
+        {/* Footer — Fabrika Media loqosu və müəllif */}
+        <div className="mt-12 pt-6 border-t border-stone-200 dark:border-stone-800 flex flex-col items-center gap-2">
+          <img
+            src={darkMode ? fabrikaLightLogo : fabrikaDarkLogo}
+            alt="Fabrika Media"
+            className="h-6 opacity-70"
+          />
+          <p className="text-[11px] text-stone-400 dark:text-stone-500">
+            {uiLang === 'ru' ? 'Создано' : 'Created by'} Rashad Huseyn
+          </p>
+        </div>
       </div>
     </div>
   );
