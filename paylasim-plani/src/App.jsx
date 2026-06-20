@@ -1027,6 +1027,54 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
 
 export default function App() {
   const [photos, setPhotos] = useState([]);
+  // ── Geri qaytar (undo) ───────────────────────────────────────────
+  // Yalnız son əməliyyatı geri qaytarır. Şəkil/karusel silmə kimi
+  // dağıdıcı əməliyyatlardan əvvəl bura bir "snapshot" qoyulur.
+  const [undoSnapshot, setUndoSnapshot] = useState(null);
+  const pushUndoSnapshot = useCallback((photosSnap, carouselsSnap) => {
+    setUndoSnapshot({ photos: photosSnap, carousels: carouselsSnap });
+  }, []);
+  const performUndo = useCallback(() => {
+    if (!undoSnapshot) return;
+    setPhotos(undoSnapshot.photos);
+    setCarousels(undoSnapshot.carousels);
+    setUndoSnapshot(null);
+  }, [undoSnapshot]);
+
+  // ── Toplu redaktə (kateqoriya tab-ında) ──────────────────────────
+  const [bulkEditMode, setBulkEditMode] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState(new Set());
+  const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkProductName, setBulkProductName] = useState('');
+  const [bulkPersonName, setBulkPersonName] = useState('');
+
+  const toggleBulkSelect = useCallback((photoId) => {
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(photoId)) next.delete(photoId); else next.add(photoId);
+      return next;
+    });
+  }, []);
+
+  const applyBulkEdit = useCallback(() => {
+    if (bulkSelected.size === 0) return;
+    pushUndoSnapshot(photos, carousels);
+    setPhotos((prev) => prev.map((p) => {
+      if (!bulkSelected.has(p.id)) return p;
+      const updated = { ...p };
+      if (bulkCategory) updated.category = bulkCategory;
+      if (bulkProductName.trim()) updated.productName = bulkProductName.trim();
+      if (bulkPersonName.trim()) updated.personName = bulkPersonName.trim();
+      return updated;
+    }));
+    addToast(`${bulkSelected.size} ${uiLang === 'ru' ? 'фото обновлено' : 'şəkil yeniləndi'}`, 'success');
+    setBulkSelected(new Set());
+    setBulkCategory('');
+    setBulkProductName('');
+    setBulkPersonName('');
+    setBulkEditMode(false);
+  }, [bulkSelected, bulkCategory, bulkProductName, bulkPersonName, photos, carousels, pushUndoSnapshot, addToast, uiLang]);
+
   const [venueName, setVenueName] = useState('');
   const [venuePresets, setVenuePresets] = useState(INITIAL_VENUE_PRESETS);
   const [newVenueInput, setNewVenueInput] = useState('');
@@ -1050,6 +1098,61 @@ export default function App() {
     });
   }, []);
   const [schedule, setSchedule] = useState(null);
+  // ── Çoxlu məkan profili ──────────────────────────────────────────
+  // Hər profil öz şəkillərini, kateqoriyalarını, planlarını saxlayır.
+  // Profil adı bütün storage açarlarına prefiks kimi əlavə olunur.
+  const [profiles, setProfiles] = useState(() => {
+    try {
+      const raw = localStorage.getItem('pp-profiles');
+      const list = raw ? JSON.parse(raw) : ['Əsas'];
+      return list.length > 0 ? list : ['Əsas'];
+    } catch { return ['Əsas']; }
+  });
+  const [activeProfile, setActiveProfile] = useState(() => {
+    try { return localStorage.getItem('pp-active-profile') || 'Əsas'; } catch { return 'Əsas'; }
+  });
+  const profilePrefix = activeProfile === 'Əsas' ? '' : `${activeProfile}::`;
+
+  const persistProfiles = useCallback((list) => {
+    try { localStorage.setItem('pp-profiles', JSON.stringify(list)); } catch { /* ignore */ }
+  }, []);
+
+  const switchProfile = useCallback((name) => {
+    setActiveProfile(name);
+    try { localStorage.setItem('pp-active-profile', name); } catch { /* ignore */ }
+    // Profil dəyişəndə işlək state-i sıfırla — aşağıdaki useEffect yeni
+    // profilin datasını window.storage-dən yükləyəcək.
+    setPhotos([]);
+    setCarousels([]);
+    setSuggestedCarousels([]);
+    setSelected(new Set());
+    setSchedule(null);
+    setPublished(new Set());
+    setAiCaptions(new Map());
+    setCaptionsRaw('');
+    setCategories(DEFAULT_CATEGORIES);
+    setVenueName('');
+  }, []);
+
+  const addProfile = useCallback((name) => {
+    const trimmed = name.trim();
+    if (!trimmed || profiles.includes(trimmed)) return;
+    const next = [...profiles, trimmed];
+    setProfiles(next);
+    persistProfiles(next);
+    switchProfile(trimmed);
+  }, [profiles, persistProfiles, switchProfile]);
+
+  const removeProfile = useCallback((name) => {
+    if (name === 'Əsas' || profiles.length <= 1) return;
+    const next = profiles.filter((p) => p !== name);
+    setProfiles(next);
+    persistProfiles(next);
+    if (activeProfile === name) switchProfile(next[0] || 'Əsas');
+  }, [profiles, persistProfiles, activeProfile, switchProfile]);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [newProfileInput, setNewProfileInput] = useState('');
+
   const [aiLoading, setAiLoading] = useState(false);
   const [aiProgress, setAiProgress] = useState({ done: 0, total: 0 });
   const [activeTab, setActiveTab] = useState('photos');
@@ -1182,6 +1285,7 @@ export default function App() {
   }, [addToast]);
 
   const removePhoto = useCallback((id) => {
+    pushUndoSnapshot(photos, carousels);
     const photo = photos.find((p) => p.id === id);
     setPhotos((prev) => prev.filter((p) => p.id !== id));
     if (photo && photo.number != null) {
@@ -1191,7 +1295,7 @@ export default function App() {
       setSelected((prev) => { const next = new Set(prev); next.delete(n); return next; });
     }
     setSchedule(null);
-  }, [photos]);
+  }, [photos, carousels, pushUndoSnapshot]);
 
   const addCategory = useCallback(() => {
     const name = newCat.trim();
@@ -1250,9 +1354,10 @@ export default function App() {
   }, [selected, addToast]);
 
   const removeCarousel = useCallback((carouselId) => {
+    pushUndoSnapshot(photos, carousels);
     setCarousels((prev) => prev.filter((c) => c.id !== carouselId));
     setSchedule(null);
-  }, []);
+  }, [photos, carousels, pushUndoSnapshot]);
 
   const confirmSuggestion = useCallback((numbers) => {
     const id = newCarouselId();
@@ -1615,20 +1720,24 @@ export default function App() {
     setRegenLoadingNums((prev) => { const n = new Set(prev); n.delete(photoNum); return n; });
   }, [venueName, captionGuide, aiProvider, aiSettings, addToast]);
 
-  // Load saved plan keys, venue presets and AI config on mount
+  // Load saved plan keys, venue presets and AI config — profil dəyişəndə yenidən yüklənir
   useEffect(() => {
     (async () => {
       try {
-        const res = await window.storage.list('plan-', false);
-        if (res && res.keys) setSavedPlanKeys(res.keys.filter((k) => k.startsWith('plan-')));
+        const res = await window.storage.list(`${profilePrefix}plan-`, false);
+        if (res && res.keys) setSavedPlanKeys(res.keys.filter((k) => k.startsWith(`${profilePrefix}plan-`)));
       } catch { /* ignore */ }
       try {
-        const vRes = await window.storage.get('venue-presets', false);
+        const vRes = await window.storage.get(`${profilePrefix}venue-presets`, false);
         if (vRes && vRes.value) {
           const saved = JSON.parse(vRes.value);
           if (Array.isArray(saved) && saved.length > 0) setVenuePresets(saved);
+          else setVenuePresets(INITIAL_VENUE_PRESETS);
+        } else {
+          setVenuePresets(INITIAL_VENUE_PRESETS);
         }
       } catch { /* ignore */ }
+      // AI konfiqurasiyası bütün profillərə aiddir, profil-spesifik deyil
       try {
         const aiRes = await window.storage.get('ai-config', false);
         if (aiRes && aiRes.value) {
@@ -1638,7 +1747,7 @@ export default function App() {
         }
       } catch { /* ignore */ }
     })();
-  }, []);
+  }, [profilePrefix]);
 
   const persistAiConfig = useCallback(async (nextProvider, nextSettings) => {
     try { await window.storage.set('ai-config', JSON.stringify({ provider: nextProvider, settings: nextSettings }), false); } catch { /* ignore */ }
@@ -1692,19 +1801,19 @@ export default function App() {
     setVenuePresets(next);
     setVenueName(name);
     setNewVenueInput('');
-    try { await window.storage.set('venue-presets', JSON.stringify(next), false); } catch { /* ignore */ }
-  }, [newVenueInput, venuePresets, addToast]);
+    try { await window.storage.set(`${profilePrefix}venue-presets`, JSON.stringify(next), false); } catch { /* ignore */ }
+  }, [newVenueInput, venuePresets, addToast, profilePrefix]);
 
   const removeVenuePreset = useCallback(async (name) => {
     const next = venuePresets.filter((v) => v !== name);
     setVenuePresets(next);
     if (venueName === name) setVenueName('');
-    try { await window.storage.set('venue-presets', JSON.stringify(next), false); } catch { /* ignore */ }
-  }, [venuePresets, venueName]);
+    try { await window.storage.set(`${profilePrefix}venue-presets`, JSON.stringify(next), false); } catch { /* ignore */ }
+  }, [venuePresets, venueName, profilePrefix]);
 
   const saveCurrentPlan = useCallback(async () => {
     if (!schedule) return;
-    const key = `plan-${year}-${monthIndex}`;
+    const key = `${profilePrefix}plan-${year}-${monthIndex}`;
     const data = { schedule, published: [...published], monthIndex, year, venueName };
     try {
       await window.storage.set(key, JSON.stringify(data), false);
@@ -1713,7 +1822,7 @@ export default function App() {
     } catch {
       addToast('Plan saxlanıla bilmədi', 'error');
     }
-  }, [schedule, published, monthIndex, year, venueName, addToast]);
+  }, [schedule, published, monthIndex, year, venueName, addToast, profilePrefix]);
 
   const loadPlan = useCallback(async (key) => {
     try {
@@ -1762,28 +1871,28 @@ export default function App() {
     scheduleSignatureRef.current = computeDataSignature(photos, carousels, captionsMap);
 
     try {
-      const res = await window.storage.get(`published-${year}-${monthIndex}`, false);
+      const res = await window.storage.get(`${profilePrefix}published-${year}-${monthIndex}`, false);
       const arr = res && res.value ? JSON.parse(res.value) : [];
       setPublished(new Set(arr));
     } catch {
       setPublished(new Set());
     }
     addToast('Plan yaradıldı', 'success');
-  }, [photos, carousels, captionsMap, year, monthIndex, addToast]);
+  }, [photos, carousels, captionsMap, year, monthIndex, addToast, profilePrefix]);
 
   const togglePublished = useCallback((postId) => {
     setPublished((prev) => {
       const next = new Set(prev);
       if (next.has(postId)) next.delete(postId); else next.add(postId);
-      window.storage.set(`published-${year}-${monthIndex}`, JSON.stringify([...next]), false).catch(() => {});
+      window.storage.set(`${profilePrefix}published-${year}-${monthIndex}`, JSON.stringify([...next]), false).catch(() => {});
       return next;
     });
-  }, [year, monthIndex]);
+  }, [year, monthIndex, profilePrefix]);
 
   const resetPublished = useCallback(async () => {
     setPublished(new Set());
-    try { await window.storage.delete(`published-${year}-${monthIndex}`, false); } catch { /* nothing */ }
-  }, [year, monthIndex]);
+    try { await window.storage.delete(`${profilePrefix}published-${year}-${monthIndex}`, false); } catch { /* nothing */ }
+  }, [year, monthIndex, profilePrefix]);
 
   const formatExport = useCallback(() => {
     if (!schedule) return '';
@@ -1888,7 +1997,62 @@ export default function App() {
       <div className="max-w-4xl mx-auto px-4 py-8 md:py-12">
         {/* Header */}
         <div className="text-center mb-8 relative">
+          <div className="absolute left-0 top-0">
+            <div className="relative">
+              <button
+                onClick={() => setProfileMenuOpen((v) => !v)}
+                className="px-3 py-2 rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 hover:border-stone-300 dark:hover:border-stone-600 transition-colors text-xs font-semibold flex items-center gap-1.5"
+              >
+                <Layers size={13} /> {activeProfile}
+              </button>
+              {profileMenuOpen && (
+                <div className="absolute left-0 top-full mt-2 w-56 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl shadow-lg p-2 z-40 text-left">
+                  <p className="text-[10px] uppercase tracking-wide text-stone-400 dark:text-stone-500 px-2 pt-1 pb-1.5">
+                    {uiLang === 'ru' ? 'Профили' : 'Profillər'}
+                  </p>
+                  {profiles.map((p) => (
+                    <div key={p} className="flex items-center gap-1">
+                      <button
+                        onClick={() => { switchProfile(p); setProfileMenuOpen(false); }}
+                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-sm flex items-center gap-2 ${p === activeProfile ? 'bg-stone-100 dark:bg-stone-800 font-medium' : 'hover:bg-stone-50 dark:hover:bg-stone-800/60'}`}
+                      >
+                        {p === activeProfile && <Check size={12} className="text-emerald-500" />}
+                        <span className={p === activeProfile ? '' : 'pl-[18px]'}>{p}</span>
+                      </button>
+                      {p !== 'Əsas' && (
+                        <button onClick={() => removeProfile(p)} className="p-1.5 text-stone-300 hover:text-red-400 rounded-lg">
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <div className="border-t border-stone-100 dark:border-stone-700 mt-2 pt-2 flex gap-1.5 px-1">
+                    <input
+                      value={newProfileInput}
+                      onChange={(e) => setNewProfileInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { addProfile(newProfileInput); setNewProfileInput(''); } }}
+                      placeholder={uiLang === 'ru' ? 'Новый профиль' : 'Yeni profil'}
+                      className="flex-1 text-xs border border-stone-200 dark:border-stone-700 rounded-lg px-2 py-1.5 dark:bg-stone-800 dark:text-stone-200"
+                    />
+                    <button
+                      onClick={() => { addProfile(newProfileInput); setNewProfileInput(''); }}
+                      className="bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-lg px-2 py-1.5"
+                    ><Plus size={12} /></button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="absolute right-0 top-0 flex items-center gap-2">
+            {undoSnapshot && (
+              <button
+                onClick={performUndo}
+                title={uiLang === 'ru' ? 'Отменить последнее действие' : 'Son əməliyyatı geri qaytar'}
+                className="px-2.5 py-2 rounded-full border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 hover:border-orange-300 transition-colors text-xs font-semibold flex items-center gap-1"
+              >
+                <RotateCcw size={13} /> {uiLang === 'ru' ? 'Отмена' : 'Geri qaytar'}
+              </button>
+            )}
             <button
               onClick={toggleUiLang}
               title="AZ / RU"
@@ -2050,6 +2214,7 @@ export default function App() {
                         <span className="text-xs text-red-600">{uiLang === 'ru' ? 'Вы уверены?' : 'Əminsiniz?'}</span>
                         <button
                           onClick={() => {
+                            pushUndoSnapshot(photos, carousels);
                             setPhotos([]);
                             setCarousels([]);
                             setSuggestedCarousels([]);
@@ -2149,13 +2314,52 @@ export default function App() {
                 <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
                   <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                     <h3 className="menu-font text-lg font-semibold">{t('photoCategoriesTitle')}</h3>
-                    <button onClick={runAI} disabled={aiLoading || categories.length === 0}
-                      className="bg-orange-600 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-orange-700 disabled:opacity-50">
-                      {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                      {aiLoading ? `${uiLang === 'ru' ? 'Анализ' : 'Təhlil edilir'} (${aiProgress.done}/${aiProgress.total})` : t('aiGuessBtn')}
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => { setBulkEditMode((v) => !v); setBulkSelected(new Set()); }}
+                        className={`rounded-lg px-3 py-2 text-sm flex items-center gap-1.5 border ${bulkEditMode ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-stone-900 dark:border-stone-100' : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+                      >
+                        <Layers size={14} /> {uiLang === 'ru' ? (bulkEditMode ? 'Закрыть массовое' : 'Массовое редактирование') : (bulkEditMode ? 'Toplunu bağla' : 'Toplu redaktə')}
+                      </button>
+                      <button onClick={runAI} disabled={aiLoading || categories.length === 0}
+                        className="bg-orange-600 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-orange-700 disabled:opacity-50">
+                        {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                        {aiLoading ? `${uiLang === 'ru' ? 'Анализ' : 'Təhlil edilir'} (${aiProgress.done}/${aiProgress.total})` : t('aiGuessBtn')}
+                      </button>
+                    </div>
                   </div>
                   {categorizedCount > 0 && <p className="text-sm text-stone-500 mb-3 dark:text-stone-400">{categorizedCount}/{photos.length} {t('photoCategoriesProgress')}</p>}
+
+                  {bulkEditMode && (
+                    <div className="mb-4 p-3 rounded-xl border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/30">
+                      <p className="text-xs text-stone-600 dark:text-stone-300 mb-2">
+                        {uiLang === 'ru'
+                          ? `Выбрано фото: ${bulkSelected.size}. Заполни поля, которые хочешь применить ко всем выбранным.`
+                          : `${bulkSelected.size} şəkil seçildi. Hamısına tətbiq etmək istədiyin sahələri doldur.`}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <select value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)}
+                          className="text-sm border border-stone-200 dark:border-stone-700 rounded-lg px-2 py-1.5 dark:bg-stone-900 dark:text-stone-200">
+                          <option value="">{uiLang === 'ru' ? '— категория не меняется —' : '— kateqoriya dəyişmir —'}</option>
+                          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <input value={bulkProductName} onChange={(e) => setBulkProductName(e.target.value)}
+                          placeholder={t('productNamePlaceholder')}
+                          className="text-sm border border-stone-200 dark:border-stone-700 rounded-lg px-2 py-1.5 dark:bg-stone-900 dark:text-stone-200 flex-1 min-w-[160px]" />
+                        <input value={bulkPersonName} onChange={(e) => setBulkPersonName(e.target.value)}
+                          placeholder={t('personNamePlaceholder')}
+                          className="text-sm border border-stone-200 dark:border-stone-700 rounded-lg px-2 py-1.5 dark:bg-stone-900 dark:text-stone-200 flex-1 min-w-[160px]" />
+                      </div>
+                      <button
+                        onClick={applyBulkEdit}
+                        disabled={bulkSelected.size === 0 || (!bulkCategory && !bulkProductName.trim() && !bulkPersonName.trim())}
+                        className="bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 disabled:opacity-40"
+                      >
+                        <Check size={13} /> {uiLang === 'ru' ? `Применить к ${bulkSelected.size}` : `${bulkSelected.size}-na tətbiq et`}
+                      </button>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     {(() => {
                       // Carousel üzvlərini qruplaşdır — bir kart kimi göstər
@@ -2185,10 +2389,27 @@ export default function App() {
                         const parts = p.category ? p.category.split(' / ') : ['', ''];
                         const cat1 = parts[0] || '';
                         const cat2 = parts[1] || '';
+                        const allMemberIds = item.members.map((m) => m.id);
+                        const isBulkSelected = allMemberIds.every((id) => bulkSelected.has(id));
 
                         return (
                           <div key={item.type === 'carousel' ? `carousel-${item.members.map(m => m.number).join('-')}` : p.id}
-                            className="flex items-center gap-3 border border-stone-200 rounded-xl p-2 dark:border-stone-700">
+                            className={`flex items-center gap-3 border rounded-xl p-2 transition-colors ${bulkEditMode && isBulkSelected ? 'border-orange-400 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-600' : 'border-stone-200 dark:border-stone-700'}`}>
+                            {bulkEditMode && (
+                              <input
+                                type="checkbox"
+                                checked={isBulkSelected}
+                                onChange={() => {
+                                  setBulkSelected((prev) => {
+                                    const next = new Set(prev);
+                                    if (isBulkSelected) allMemberIds.forEach((id) => next.delete(id));
+                                    else allMemberIds.forEach((id) => next.add(id));
+                                    return next;
+                                  });
+                                }}
+                                className="flex-shrink-0 w-4 h-4 rounded border-stone-300 dark:border-stone-600 text-orange-600 focus:ring-orange-400"
+                              />
+                            )}
                             {/* Şəkil(lər) */}
                             {item.type === 'carousel' ? (
                               <div className="relative flex-shrink-0 w-12 h-12">
@@ -2415,8 +2636,9 @@ export default function App() {
                 <h3 className="menu-font text-lg font-semibold mb-3">{uiLang === 'ru' ? 'Сохранённые планы' : 'Saxlanmış planlar'}</h3>
                 <div className="flex flex-wrap gap-2">
                   {savedPlanKeys.map((key) => {
-                    // key = plan-YYYY-M
-                    const parts = key.replace('plan-', '').split('-');
+                    // key = [profil::]plan-YYYY-M
+                    const withoutPrefix = key.includes('::') ? key.split('::')[1] : key;
+                    const parts = withoutPrefix.replace('plan-', '').split('-');
                     const y = parts[0]; const m = parseInt(parts[1]);
                     const monthsList = uiLang === 'ru' ? MONTHS_RU : MONTHS;
                     const label = `${monthsList[m] || m} ${y}`;
