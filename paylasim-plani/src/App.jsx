@@ -6,6 +6,160 @@ import {
 } from 'lucide-react';
 
 /* ====================================================================
+   İNTERFEYS TƏRCÜMƏ LÜĞƏTİ (AZ / RU)
+   Bu, tətbiqin interfeys dilini idarə edir (düymələr, başlıqlar,
+   izahatlar). AI-a göndərilən caption promptları ilə HEÇ BİR ƏLAQƏSİ
+   yoxdur — caption dili ayrıca "Rus dili tərcüməsi" checkbox-ı ilə
+   idarə olunur (yuxarıda izah edildiyi kimi, bunlar tamamilə ayrı
+   sistemlərdir).
+   ==================================================================== */
+const TRANSLATIONS = {
+  az: {
+    appSubtitle: 'Sosial Media Planlayıcı',
+    appTitle: 'Aylıq Paylaşım Planı',
+    appDesc: 'Şəkilləri yüklə, AI kateqoriyaları təxmin etsin, captionları əlavə et — sənin üçün ay boyu məntiqli ardıcıllıqla paylaşım planı qurulsun.',
+    darkModeOn: 'Qaranlıq görünüşə keç',
+    darkModeOff: 'İşıqlı görünüşə keç',
+    tabPhotos: '1. Şəkillər',
+    tabCategories: '2. Kateqoriyalar',
+    tabCaptions: '3. Captionlar',
+    tabPlan: '4. Plan',
+    aiProvider: 'AI Provayder',
+    aiFallbackAnthropic: '⚡ Limit olduqda avtomatik OpenAI → Gemini-yə keçəcək.',
+    aiKeysNote: 'Açarlar Cloudflare Worker-də saxlanılır.',
+    aiFallbackOther: '⚡ Açarlar Cloudflare Worker-də saxlanılır. Limit olduqda avtomatik yedəyə keçər.',
+    russianToggle: '🇷🇺 Rus dili tərcüməsini caption-a əlavə et (AZ + RU bir caption-da)',
+    venueTitle: 'Məkan',
+    venueDesc: 'Bu planın hansı məkana aid olduğunu seç. Caption yazanda da bu ad istifadə ediləcək.',
+    venueAddPlaceholder: 'Yeni məkan əlavə et (məs. Nargile Club)',
+    addBtn: 'Əlavə et',
+    venueSelected: 'Seçildi',
+    uploadTitle: 'Şəkilləri yüklə',
+    uploadDrag: 'Şəkilləri buraya sürüklə, yaxud kliklə',
+    uploadHint: 'JPG, PNG və s. — istənilən fayl adı qəbul olunur, nömrələnmə avtomatikdir',
+    photosUploaded: 'Yüklənmiş şəkillər',
+    selectModeBtn: 'Seç',
+    deleteModeBtn: 'Sil',
+    carouselBtn: 'Karusel et',
+    unlinkBtn: 'Ayır',
+    deleteSelectedBtn: 'Seçilənləri sil',
+    deleteAllBtn: 'Hamısını sil',
+    confirmDeleteAll: 'Silməyi təsdiqlə',
+    filterAll: 'Hamısı',
+    filterCarousel: 'Karusellər',
+    filterSingle: 'Tək şəkillər',
+    nextBtn: 'Növbəti',
+    categoriesTitle: 'Kateqoriya siyahısı',
+    categoriesDesc: 'AI yalnız bu siyahıdan seçəcək.',
+    categoryAddPlaceholder: 'Yeni kateqoriya (məs. Şirniyyat)',
+    photoCategoriesTitle: 'Şəkillərin kateqoriyası',
+    photoCategoriesProgress: 'şəkil kateqoriyalandı.',
+    aiGuessBtn: 'AI ilə təxmin et',
+    aiGuessingBtn: 'AI təxmin edir...',
+    cat1Placeholder: '— 1ci kateqoriya —',
+    cat2Placeholder: '+ 2ci kateqoriya (istəyə bağlı)',
+    otherCategory: 'Digər',
+    productNamePlaceholder: 'Məhsul adı (məs. Strawberry Cheesecake)',
+    personNamePlaceholder: 'Şəxs adı (məs. DJ Vugarixx)',
+    backBtn: 'Geri',
+    captionsManualTitle: 'Captionları yapışdır',
+    captionsManualDesc: 'Öz captionlarını yaz, ya generate etdiklərini kopyalayıb buraya yapışdır. Hər captionu şəkil nömrəsi ilə başla — məs.',
+    captionsManualExample: '1. Şəhərin ən gözəl mənzərəsi',
+    aiCaptionGenTitle: 'AI Caption Generator',
+    aiCaptionGenDesc: 'AI hər şəkli görür və caption yazır. İstəsən şablon göndər — AI o üslubda yazacaq.',
+    captionGuideLabel: 'ŞABLON (İSTƏYƏ BAĞLI) — ÖZ CAPTIONLARINDAN NÜMUNƏ YAPIŞDIR',
+    generateAllBtn: 'Hamısı üçün caption yaz',
+    generatingBtn: 'Yazılır...',
+    copyAllBtn: 'Hamısını kopyala',
+    addAllToPasteBtn: 'Paste bölməsinə əlavə et',
+    planSectionTitle: 'Plan',
+    monthLabel: 'Ay',
+    yearLabel: 'İl',
+    generatePlanBtn: 'Plan yarat',
+    reshuffleBtn: 'Yenidən qarışdır',
+    savePlanBtn: 'Planı saxla',
+    savedBtn: 'Saxlanıldı',
+    editBtn: 'Redaktə',
+    copyBtn: 'Kopyala',
+    doneBtn: 'Tamamlandı',
+    carouselLabel: 'Karusel',
+  },
+  ru: {
+    appSubtitle: 'Планировщик соцсетей',
+    appTitle: 'Месячный план публикаций',
+    appDesc: 'Загрузи фото, AI определит категории, добавь подписи — для тебя будет составлен логичный план публикаций на весь месяц.',
+    darkModeOn: 'Включить тёмный режим',
+    darkModeOff: 'Включить светлый режим',
+    tabPhotos: '1. Фото',
+    tabCategories: '2. Категории',
+    tabCaptions: '3. Подписи',
+    tabPlan: '4. План',
+    aiProvider: 'AI Провайдер',
+    aiFallbackAnthropic: '⚡ При лимите автоматически переключится на OpenAI → Gemini.',
+    aiKeysNote: 'Ключи хранятся в Cloudflare Worker.',
+    aiFallbackOther: '⚡ Ключи хранятся в Cloudflare Worker. При лимите переключится на резервный.',
+    russianToggle: '🇷🇺 Добавить русский перевод к подписи (AZ + RU в одной подписи)',
+    venueTitle: 'Место',
+    venueDesc: 'Выбери, к какому месту относится этот план. Это название будет использовано и при написании подписи.',
+    venueAddPlaceholder: 'Добавить новое место (напр. Nargile Club)',
+    addBtn: 'Добавить',
+    venueSelected: 'Выбрано',
+    uploadTitle: 'Загрузить фото',
+    uploadDrag: 'Перетащи фото сюда или нажми',
+    uploadHint: 'JPG, PNG и др. — любое имя файла подходит, нумерация автоматическая',
+    photosUploaded: 'Загруженные фото',
+    selectModeBtn: 'Выбрать',
+    deleteModeBtn: 'Удалить',
+    carouselBtn: 'Сделать карусель',
+    unlinkBtn: 'Разделить',
+    deleteSelectedBtn: 'Удалить выбранные',
+    deleteAllBtn: 'Удалить всё',
+    confirmDeleteAll: 'Подтвердить удаление',
+    filterAll: 'Все',
+    filterCarousel: 'Карусели',
+    filterSingle: 'Одиночные',
+    nextBtn: 'Далее',
+    categoriesTitle: 'Список категорий',
+    categoriesDesc: 'AI будет выбирать только из этого списка.',
+    categoryAddPlaceholder: 'Новая категория (напр. Десерт)',
+    photoCategoriesTitle: 'Категории фото',
+    photoCategoriesProgress: 'фото категоризировано.',
+    aiGuessBtn: 'Угадать с помощью AI',
+    aiGuessingBtn: 'AI угадывает...',
+    cat1Placeholder: '— 1-я категория —',
+    cat2Placeholder: '+ 2-я категория (необязательно)',
+    otherCategory: 'Другое',
+    productNamePlaceholder: 'Название продукта (напр. Strawberry Cheesecake)',
+    personNamePlaceholder: 'Имя человека (напр. DJ Vugarixx)',
+    backBtn: 'Назад',
+    captionsManualTitle: 'Вставить подписи',
+    captionsManualDesc: 'Напиши свои подписи или скопируй сгенерированные и вставь сюда. Начинай каждую подпись с номера фото — напр.',
+    captionsManualExample: '1. Лучший вид города',
+    aiCaptionGenTitle: 'AI Генератор подписей',
+    aiCaptionGenDesc: 'AI видит каждое фото и пишет подпись. Можешь отправить образец — AI напишет в этом стиле.',
+    captionGuideLabel: 'ОБРАЗЕЦ (НЕОБЯЗАТЕЛЬНО) — ВСТАВЬ ПРИМЕР СВОИХ ПОДПИСЕЙ',
+    generateAllBtn: 'Написать подписи для всех',
+    generatingBtn: 'Пишется...',
+    copyAllBtn: 'Скопировать все',
+    addAllToPasteBtn: 'Добавить в поле вставки',
+    planSectionTitle: 'План',
+    monthLabel: 'Месяц',
+    yearLabel: 'Год',
+    generatePlanBtn: 'Создать план',
+    reshuffleBtn: 'Перемешать снова',
+    savePlanBtn: 'Сохранить план',
+    savedBtn: 'Сохранено',
+    editBtn: 'Редактировать',
+    copyBtn: 'Копировать',
+    doneBtn: 'Готово',
+    carouselLabel: 'Карусель',
+  },
+};
+
+const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+
+/* ====================================================================
    DÜZƏLİŞ QEYDLƏRİ
    1. TypeScript sintaksisi (interface, generic, "as X", "!") tamamilə
       silindi — fayl .jsx kimi sadə Babel/JSX mühitində compile olunur.
@@ -609,15 +763,15 @@ function PhotoGrid({ photos, categories, carousels, selectMode, deleteMode, sele
 }
 
 /* --- CarouselManager --- */
-function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSuggestion, onDismissSuggestion, onRemoveCarousel }) {
+function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSuggestion, onDismissSuggestion, onRemoveCarousel, uiLang = 'az' }) {
   return (
     <>
       {suggestedCarousels.length > 0 && (
         <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
           <h3 className="menu-font text-lg font-semibold mb-3 flex items-center gap-2">
-            <Sparkles size={16} className="text-orange-600" /> AI təklif etdiyi karusellər
+            <Sparkles size={16} className="text-orange-600" /> {uiLang === 'ru' ? 'AI предлагает карусели' : 'AI təklif etdiyi karusellər'}
           </h3>
-          <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">Bu şəkillər çox oxşardır — istəsən birlikdə tək bir post kimi planlaşdır.</p>
+          <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">{uiLang === 'ru' ? 'Эти фото очень похожи — можешь объединить их в один пост.' : 'Bu şəkillər çox oxşardır — istəsən birlikdə tək bir post kimi planlaşdır.'}</p>
           <div className="space-y-2">
             {suggestedCarousels.map((nums) => (
               <div key={nums.join(',')} className="flex items-center gap-2 flex-wrap border border-stone-100 rounded-xl p-2">
@@ -627,10 +781,10 @@ function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSugge
                     return ph ? <img key={n} src={ph.dataUrl} className="w-10 h-10 rounded-lg object-cover border-2 border-white" alt={ph.filename} /> : null;
                   })}
                 </div>
-                <span className="text-sm text-stone-500 dark:text-stone-400">Şəkillər: {nums.join(', ')}</span>
+                <span className="text-sm text-stone-500 dark:text-stone-400">{uiLang === 'ru' ? 'Фото' : 'Şəkillər'}: {nums.join(', ')}</span>
                 <div className="ml-auto flex gap-2">
-                  <button onClick={() => onConfirmSuggestion(nums)} className="text-emerald-600 border border-emerald-200 rounded-lg px-2 py-1 text-xs flex items-center gap-1 hover:bg-emerald-50"><Check size={12} /> Təsdiqlə</button>
-                  <button onClick={() => onDismissSuggestion(nums)} className="text-stone-400 border border-stone-200 rounded-lg px-2 py-1 text-xs flex items-center gap-1 hover:bg-stone-50 dark:text-stone-500 dark:border-stone-700"><X size={12} /> Rədd et</button>
+                  <button onClick={() => onConfirmSuggestion(nums)} className="text-emerald-600 border border-emerald-200 rounded-lg px-2 py-1 text-xs flex items-center gap-1 hover:bg-emerald-50"><Check size={12} /> {uiLang === 'ru' ? 'Подтвердить' : 'Təsdiqlə'}</button>
+                  <button onClick={() => onDismissSuggestion(nums)} className="text-stone-400 border border-stone-200 rounded-lg px-2 py-1 text-xs flex items-center gap-1 hover:bg-stone-50 dark:text-stone-500 dark:border-stone-700"><X size={12} /> {uiLang === 'ru' ? 'Отклонить' : 'Rədd et'}</button>
                 </div>
               </div>
             ))}
@@ -640,7 +794,7 @@ function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSugge
 
       {carousels.length > 0 && (
         <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
-          <h3 className="menu-font text-lg font-semibold mb-3 flex items-center gap-2"><Layers size={16} /> Karusellər</h3>
+          <h3 className="menu-font text-lg font-semibold mb-3 flex items-center gap-2"><Layers size={16} /> {uiLang === 'ru' ? 'Карусели' : 'Karusellər'}</h3>
           <div className="space-y-2">
             {carousels.map((c, ci) => (
               <div key={c.id} className={`flex items-center gap-2 flex-wrap rounded-xl p-2 ring-2 ${GROUP_RINGS[ci % GROUP_RINGS.length]}`}>
@@ -650,9 +804,9 @@ function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSugge
                     return ph ? <img key={n} src={ph.dataUrl} className="w-10 h-10 rounded-lg object-cover border-2 border-white" alt={ph.filename} /> : null;
                   })}
                 </div>
-                <span className="text-sm text-stone-500 dark:text-stone-400">Şəkillər: {c.numbers.join(', ')} · planda 1 post kimi</span>
+                <span className="text-sm text-stone-500 dark:text-stone-400">{uiLang === 'ru' ? 'Фото' : 'Şəkillər'}: {c.numbers.join(', ')} · {uiLang === 'ru' ? 'как 1 пост в плане' : 'planda 1 post kimi'}</span>
                 <button onClick={() => onRemoveCarousel(c.id)} className="ml-auto text-stone-400 border border-stone-200 rounded-lg px-2 py-1 text-xs flex items-center gap-1 hover:bg-stone-50 dark:text-stone-500 dark:border-stone-700">
-                  <Unlink size={12} /> Ayır
+                  <Unlink size={12} /> {uiLang === 'ru' ? 'Разделить' : 'Ayır'}
                 </button>
               </div>
             ))}
@@ -664,7 +818,7 @@ function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSugge
 }
 
 /* --- ScheduleView --- */
-function ScheduleView({ schedule, monthIndex, year, published, categories, onTogglePublished, onResetPublished, onCopy, onDownload, onExportPDF, copyStatus, onReorderPost, onEditCaption }) {
+function ScheduleView({ schedule, monthIndex, year, published, categories, onTogglePublished, onResetPublished, onCopy, onDownload, onExportPDF, copyStatus, onReorderPost, onEditCaption, uiLang = 'az' }) {
   const [filter, setFilter] = useState('all');
   const [editingCaption, setEditingCaption] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -672,6 +826,7 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
   const allPosts = schedule.flatMap((d) => d.posts);
   const totalPosts = allPosts.length;
   const doneCount = allPosts.filter((p) => published.has(p.id)).length;
+  const monthsList = uiLang === 'ru' ? MONTHS_RU : MONTHS;
 
   const startEdit = (post) => {
     setEditingCaption(post.id);
@@ -694,26 +849,26 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
   return (
     <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="menu-font text-xl font-semibold">{MONTHS[monthIndex]} {year}</h3>
+        <h3 className="menu-font text-xl font-semibold">{monthsList[monthIndex]} {year}</h3>
         <div className="flex gap-2 flex-wrap">
           <button onClick={onCopy} className="border border-stone-200 rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 hover:bg-stone-50 dark:border-stone-700">
-            <Copy size={14} /> {copyStatus || 'Mətn kimi kopyala'}
+            <Copy size={14} /> {copyStatus || (uiLang === 'ru' ? 'Копировать как текст' : 'Mətn kimi kopyala')}
           </button>
           <button onClick={onDownload} className="border border-stone-200 rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 hover:bg-stone-50 dark:border-stone-700">
             <Download size={14} /> .txt
           </button>
           <button onClick={onExportPDF} className="bg-orange-600 text-white rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 hover:bg-orange-700">
-            <FileText size={14} /> PDF yüklə
+            <FileText size={14} /> {uiLang === 'ru' ? 'Скачать PDF' : 'PDF yüklə'}
           </button>
         </div>
       </div>
 
       <div className="mb-4">
         <div className="flex items-center justify-between text-xs text-stone-500 mb-1.5 dark:text-stone-400">
-          <span>{doneCount}/{totalPosts} paylaşıldı</span>
+          <span>{doneCount}/{totalPosts} {uiLang === 'ru' ? 'опубликовано' : 'paylaşıldı'}</span>
           {doneCount > 0 && (
             <button onClick={onResetPublished} className="flex items-center gap-1 text-stone-400 hover:text-stone-600 dark:text-stone-500">
-              <RotateCcw size={12} /> Sıfırla
+              <RotateCcw size={12} /> {uiLang === 'ru' ? 'Сбросить' : 'Sıfırla'}
             </button>
           )}
         </div>
@@ -724,9 +879,9 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
 
       <div className="flex gap-2 mb-4">
         {[
-          { id: 'all', label: `Hamısı (${totalPosts})` },
-          { id: 'pending', label: `Qalan (${totalPosts - doneCount})` },
-          { id: 'done', label: `Paylaşılan (${doneCount})` },
+          { id: 'all', label: uiLang === 'ru' ? `Все (${totalPosts})` : `Hamısı (${totalPosts})` },
+          { id: 'pending', label: uiLang === 'ru' ? `Осталось (${totalPosts - doneCount})` : `Qalan (${totalPosts - doneCount})` },
+          { id: 'done', label: uiLang === 'ru' ? `Опубликовано (${doneCount})` : `Paylaşılan (${doneCount})` },
         ].map((f) => (
           <button key={f.id} onClick={() => setFilter(f.id)}
             className={`text-xs px-3 py-1.5 rounded-full border ${filter === f.id ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-stone-900 dark:border-stone-100' : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:border-stone-300 dark:hover:border-stone-600'}`}>
@@ -745,11 +900,13 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                 <span className="menu-font text-2xl font-semibold text-stone-800 w-12 flex-shrink-0 dark:text-stone-200">{String(day.day).padStart(2, '0')}</span>
                 <span className="dotted-leader" />
                 <span className="text-xs text-stone-400 dark:text-stone-500">
-                  {filter === 'all' ? `${day.posts.length} paylaşım` : `${visiblePosts.length}/${day.posts.length}`}
+                  {filter === 'all'
+                    ? (uiLang === 'ru' ? `${day.posts.length} публикаций` : `${day.posts.length} paylaşım`)
+                    : `${visiblePosts.length}/${day.posts.length}`}
                 </span>
               </div>
               {visiblePosts.length === 0 ? (
-                <p className="text-sm text-stone-400 ml-12 dark:text-stone-500">— paylaşım yoxdur —</p>
+                <p className="text-sm text-stone-400 ml-12 dark:text-stone-500">{uiLang === 'ru' ? '— нет публикаций —' : '— paylaşım yoxdur —'}</p>
               ) : (
                 <div className="space-y-3 ml-0 sm:ml-12">
                   {day.posts.map((post, postIdx) => {
@@ -773,13 +930,13 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                             onClick={() => onReorderPost(day.day, postIdx, prevVisibleIdx)}
                             disabled={prevVisibleIdx === -1}
                             className="text-stone-300 hover:text-stone-500 disabled:opacity-20 disabled:cursor-not-allowed leading-none"
-                            title="Yuxarı köçür"
+                            title={uiLang === 'ru' ? 'Переместить вверх' : 'Yuxarı köçür'}
                           >▲</button>
                           <button
                             onClick={() => onReorderPost(day.day, postIdx, nextVisibleIdx)}
                             disabled={nextVisibleIdx === -1}
                             className="text-stone-300 hover:text-stone-500 disabled:opacity-20 disabled:cursor-not-allowed leading-none"
-                            title="Aşağı köçür"
+                            title={uiLang === 'ru' ? 'Переместить вниз' : 'Aşağı köçür'}
                           >▼</button>
                         </div>
 
@@ -802,7 +959,7 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${color.bg} ${color.text}`}>{post.category}</span>
                             {post.type === 'carousel' && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-200 text-stone-600 flex items-center gap-0.5 dark:bg-stone-700 dark:text-stone-300">
-                                <Layers size={9} /> Karusel
+                                <Layers size={9} /> {uiLang === 'ru' ? 'Карусель' : 'Karusel'}
                               </span>
                             )}
                           </div>
@@ -817,10 +974,10 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                               />
                               <div className="flex gap-2 mt-1">
                                 <button onClick={() => saveEdit(post.id)} className="text-xs bg-stone-900 text-white rounded-lg px-2.5 py-1 flex items-center gap-1 hover:bg-stone-700">
-                                  <Check size={11} /> Saxla
+                                  <Check size={11} /> {uiLang === 'ru' ? 'Сохранить' : 'Saxla'}
                                 </button>
                                 <button onClick={() => setEditingCaption(null)} className="text-xs border border-stone-200 rounded-lg px-2.5 py-1 hover:bg-stone-100 dark:border-stone-700">
-                                  Ləğv et
+                                  {uiLang === 'ru' ? 'Отмена' : 'Ləğv et'}
                                 </button>
                               </div>
                             </div>
@@ -829,26 +986,26 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                               {post.caption ? (
                                 <p className={`text-sm italic menu-font leading-snug ${isDone ? 'text-stone-400 dark:text-stone-500 line-through' : 'text-stone-700 dark:text-stone-300'}`}>"{post.caption}"</p>
                               ) : (
-                                <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle size={12} /> Caption tapılmadı</p>
+                                <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle size={12} /> {uiLang === 'ru' ? 'Подпись не найдена' : 'Caption tapılmadı'}</p>
                               )}
                               <div className="flex gap-1.5 mt-1.5">
                                 <button
                                   onClick={() => startEdit(post)}
                                   className="text-[10px] border border-stone-200 rounded-md px-1.5 py-0.5 text-stone-500 hover:bg-stone-100 flex items-center gap-0.5 dark:text-stone-400 dark:border-stone-700"
-                                  title="Redaktə et"
-                                >✏️ Redaktə</button>
+                                  title={uiLang === 'ru' ? 'Редактировать' : 'Redaktə et'}
+                                >✏️ {uiLang === 'ru' ? 'Редактировать' : 'Redaktə'}</button>
                                 {post.caption && (
                                   <button
                                     onClick={() => copyCaption(post.id, post.caption)}
                                     className="text-[10px] border border-stone-200 rounded-md px-1.5 py-0.5 text-stone-500 hover:bg-stone-100 flex items-center gap-0.5 dark:text-stone-400 dark:border-stone-700"
-                                    title="Kopyala"
-                                  >{isCopied ? '✓ Kopyalandı' : '📋 Kopyala'}</button>
+                                    title={uiLang === 'ru' ? 'Копировать' : 'Kopyala'}
+                                  >{isCopied ? (uiLang === 'ru' ? '✓ Скопировано' : '✓ Kopyalandı') : (uiLang === 'ru' ? '📋 Копировать' : '📋 Kopyala')}</button>
                                 )}
                               </div>
                             </>
                           )}
                         </div>
-                        <button onClick={() => onTogglePublished(post.id)} className="flex-shrink-0 self-start" title="Paylaşıldı kimi işarələ">
+                        <button onClick={() => onTogglePublished(post.id)} className="flex-shrink-0 self-start" title={uiLang === 'ru' ? 'Отметить как опубликовано' : 'Paylaşıldı kimi işarələ'}>
                           {isDone ? <CheckCircle2 size={20} className="text-emerald-500" /> : <Circle size={20} className="text-stone-300 hover:text-stone-400" />}
                         </button>
                       </div>
@@ -880,6 +1037,18 @@ export default function App() {
   const [year, setYear] = useState(2026);
   // Rus dili tərcüməsi — aktiv olanda hər caption AZ + RU formatında yazılır
   const [includeRussian, setIncludeRussian] = useState(false);
+  // İnterfeys dili (AZ/RU) — bu, caption dilindən tamamilə ayrı bir sistemdir
+  const [uiLang, setUiLang] = useState(() => {
+    try { return localStorage.getItem('pp-ui-lang') || 'az'; } catch { return 'az'; }
+  });
+  const t = useCallback((key) => TRANSLATIONS[uiLang]?.[key] ?? TRANSLATIONS.az[key] ?? key, [uiLang]);
+  const toggleUiLang = useCallback(() => {
+    setUiLang((prev) => {
+      const next = prev === 'az' ? 'ru' : 'az';
+      try { localStorage.setItem('pp-ui-lang', next); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
   const [schedule, setSchedule] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiProgress, setAiProgress] = useState({ done: 0, total: 0 });
@@ -1699,10 +1868,10 @@ export default function App() {
   /* ------------------------------- Tabs ------------------------------- */
 
   const tabs = [
-    { id: 'photos', label: '1. Şəkillər', done: photos.length > 0 },
-    { id: 'categories', label: '2. Kateqoriyalar', done: photos.length > 0 && categorizedCount === photos.length },
-    { id: 'captions', label: '3. Captionlar', done: matchedCount > 0 && matchedCount === photos.length },
-    { id: 'plan', label: '4. Plan', done: !!schedule },
+    { id: 'photos', label: t('tabPhotos'), done: photos.length > 0 },
+    { id: 'categories', label: t('tabCategories'), done: photos.length > 0 && categorizedCount === photos.length },
+    { id: 'captions', label: t('tabCaptions'), done: matchedCount > 0 && matchedCount === photos.length },
+    { id: 'plan', label: t('tabPlan'), done: !!schedule },
   ];
 
   return (
@@ -1719,27 +1888,36 @@ export default function App() {
       <div className="max-w-4xl mx-auto px-4 py-8 md:py-12">
         {/* Header */}
         <div className="text-center mb-8 relative">
-          <button
-            onClick={toggleDarkMode}
-            title={darkMode ? 'İşıqlı görünüşə keç' : 'Qaranlıq görünüşə keç'}
-            className="absolute right-0 top-0 p-2 rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-500 dark:text-stone-300 hover:border-stone-300 dark:hover:border-stone-600 transition-colors dark:text-stone-400"
-          >
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <p className="text-xs tracking-[0.3em] uppercase text-orange-700/70 dark:text-orange-400/80 mb-2">Sosial Media Planlayıcı</p>
-          <h1 className="menu-font text-3xl md:text-4xl font-semibold text-stone-900 dark:text-stone-50">Aylıq Paylaşım Planı</h1>
+          <div className="absolute right-0 top-0 flex items-center gap-2">
+            <button
+              onClick={toggleUiLang}
+              title="AZ / RU"
+              className="px-2.5 py-2 rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-500 dark:text-stone-300 hover:border-stone-300 dark:hover:border-stone-600 transition-colors text-xs font-semibold"
+            >
+              {uiLang === 'az' ? 'RU' : 'AZ'}
+            </button>
+            <button
+              onClick={toggleDarkMode}
+              title={darkMode ? t('darkModeOff') : t('darkModeOn')}
+              className="p-2 rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-500 dark:text-stone-300 hover:border-stone-300 dark:hover:border-stone-600 transition-colors dark:text-stone-400"
+            >
+              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
+          <p className="text-xs tracking-[0.3em] uppercase text-orange-700/70 dark:text-orange-400/80 mb-2">{t('appSubtitle')}</p>
+          <h1 className="menu-font text-3xl md:text-4xl font-semibold text-stone-900 dark:text-stone-50">{t('appTitle')}</h1>
           <p className="text-stone-500 dark:text-stone-400 mt-2 text-sm max-w-md mx-auto">
-            Şəkilləri yüklə, AI kateqoriyaları təxmin etsin, captionları əlavə et — sənin üçün ay boyu məntiqli ardıcıllıqla paylaşım planı qurulsun.
+            {t('appDesc')}
           </p>
         </div>
 
         {/* Tabs */}
         <div className="flex flex-wrap gap-2 justify-center mb-8">
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${activeTab === t.id ? 'bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-900 border-stone-900 dark:border-stone-100' : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600'}`}>
-              {t.done && <Check size={14} className={activeTab === t.id ? 'text-emerald-400' : 'text-emerald-500'} />}
-              {t.label}
+          {tabs.map((tab) => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${activeTab === tab.id ? 'bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-900 border-stone-900 dark:border-stone-100' : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600'}`}>
+              {tab.done && <Check size={14} className={activeTab === tab.id ? 'text-emerald-400' : 'text-emerald-500'} />}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -1747,7 +1925,7 @@ export default function App() {
         {/* AI Provider Settings — kateqoriya/karusel/caption funksiyalarının hamısı bunu istifadə edir */}
         <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 p-4 mb-6 flex flex-wrap items-center gap-3">
           <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide flex items-center gap-1.5 flex-shrink-0">
-            <Sparkles size={12} /> AI Provayder
+            <Sparkles size={12} /> {t('aiProvider')}
           </span>
           <div className="flex gap-1.5 flex-wrap">
             {AI_PROVIDERS.map((p) => (
@@ -1763,8 +1941,8 @@ export default function App() {
           {/* Açar inputları silindi — açarlar Cloudflare Worker-də saxlanılır */}
           <span className="text-[11px] text-stone-400 dark:text-stone-500 w-full sm:w-auto">
             {aiProvider === 'anthropic'
-              ? <><span className="text-emerald-600 dark:text-emerald-400 font-medium">⚡ Limit olduqda avtomatik OpenAI → Gemini-yə keçəcək.</span> Açarlar Cloudflare Worker-də saxlanılır.</>
-              : <span className="text-emerald-600 dark:text-emerald-400 font-medium">⚡ Açarlar Cloudflare Worker-də saxlanılır. Limit olduqda avtomatik yedəyə keçər.</span>
+              ? <><span className="text-emerald-600 dark:text-emerald-400 font-medium">{t('aiFallbackAnthropic')}</span> {t('aiKeysNote')}</>
+              : <span className="text-emerald-600 dark:text-emerald-400 font-medium">{t('aiFallbackOther')}</span>
             }
           </span>
           <label className="flex items-center gap-2 text-xs font-medium text-stone-600 dark:text-stone-300 cursor-pointer border-t border-stone-100 dark:border-stone-700 w-full pt-3 mt-1">
@@ -1774,7 +1952,7 @@ export default function App() {
               onChange={(e) => setIncludeRussian(e.target.checked)}
               className="rounded border-stone-300 dark:border-stone-600 text-orange-600 focus:ring-orange-400"
             />
-            🇷🇺 Rus dili tərcüməsini caption-a əlavə et (AZ + RU bir caption-da)
+            {t('russianToggle')}
           </label>
         </div>
 
@@ -1783,8 +1961,8 @@ export default function App() {
           <div className="space-y-5">
             {/* Venue name section */}
             <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
-              <h3 className="menu-font text-lg font-semibold mb-1">Məkan</h3>
-              <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">Bu planın hansı məkana aid olduğunu seç. Caption yazanda da bu ad istifadə ediləcək.</p>
+              <h3 className="menu-font text-lg font-semibold mb-1">{t('venueTitle')}</h3>
+              <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">{t('venueDesc')}</p>
               <div className="flex flex-wrap gap-2 mb-3">
                 {venuePresets.map((v) => (
                   <div key={v} className={`flex items-center gap-1 rounded-full border transition-colors ${venueName === v ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-stone-900 dark:border-stone-100' : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300'}`}>
@@ -1805,15 +1983,15 @@ export default function App() {
                   value={newVenueInput}
                   onChange={(e) => setNewVenueInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') addVenuePreset(); }}
-                  placeholder="Yeni məkan əlavə et (məs. Nargile Club)"
+                  placeholder={t('venueAddPlaceholder')}
                   className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder-stone-500"
                 />
                 <button onClick={addVenuePreset} disabled={!newVenueInput.trim()} className="bg-stone-900 text-white rounded-lg px-3 py-2 text-sm flex items-center gap-1 hover:bg-stone-800 disabled:opacity-40">
-                  <Plus size={14} /> Əlavə et
+                  <Plus size={14} /> {t('addBtn')}
                 </button>
               </div>
               {venueName && (
-                <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1"><Check size={12} /> Seçildi: <strong>{venueName}</strong></p>
+                <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1"><Check size={12} /> {t('venueSelected')}: <strong>{venueName}</strong></p>
               )}
             </div>
 
@@ -1825,8 +2003,8 @@ export default function App() {
               className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-colors ${dragOver ? 'border-orange-400 bg-orange-50 dark:bg-orange-950/30' : 'border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 hover:border-stone-400 dark:hover:border-stone-500'}`}
             >
               <ImagePlus className="mx-auto mb-3 text-stone-400 dark:text-stone-500" size={36} />
-              <p className="text-stone-700 font-medium dark:text-stone-300">Şəkilləri buraya sürüklə və ya klikləyib seç</p>
-              <p className="text-stone-400 text-sm mt-1 dark:text-stone-500">Fayl adları nömrəli olmalıdır (1.jpg, 2.jpg ...)</p>
+              <p className="text-stone-700 font-medium dark:text-stone-300">{t('uploadDrag')}</p>
+              <p className="text-stone-400 text-sm mt-1 dark:text-stone-500">{t('uploadHint')}</p>
               <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
                 onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = ''; }} />
             </div>
@@ -1834,37 +2012,37 @@ export default function App() {
             {photos.length > 0 && (
               <>
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <p className="text-sm text-stone-500 dark:text-stone-400">{photos.length} şəkil yükləndi</p>
+                  <p className="text-sm text-stone-500 dark:text-stone-400">{photos.length} {t('photosUploaded')}</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
                       onClick={runAICarousel}
                       disabled={aiCarouselLoading || photos.length < 2}
                       className="bg-orange-600 text-white rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 hover:bg-orange-700 disabled:opacity-50"
                     >
-                      {aiCarouselLoading ? <><Loader2 size={14} className="animate-spin" /> Axtarılır...</> : <><Sparkles size={14} /> AI karusel təklifi</>}
+                      {aiCarouselLoading ? <><Loader2 size={14} className="animate-spin" /> {uiLang === 'ru' ? 'Поиск...' : 'Axtarılır...'}</> : <><Sparkles size={14} /> {uiLang === 'ru' ? 'AI предложение карусели' : 'AI karusel təklifi'}</>}
                     </button>
                     <button
                       onClick={() => { setSelectMode((s) => { if (!s) setDeleteMode(false); return !s; }); setSelected(new Set()); }}
                       className={`rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 border ${selectMode ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-stone-900 dark:border-stone-100' : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
                     >
-                      <Layers size={14} /> {selectMode ? 'Seçimi bağla' : 'Karusel seç'}
+                      <Layers size={14} /> {selectMode ? (uiLang === 'ru' ? 'Закрыть выбор' : 'Seçimi bağla') : (uiLang === 'ru' ? 'Выбрать для карусели' : 'Karusel seç')}
                     </button>
                     <button
                       onClick={() => { setDeleteMode((d) => { if (!d) setSelectMode(false); return !d; }); setSelected(new Set()); }}
                       className={`rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 border ${deleteMode ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
                     >
-                      <X size={14} /> {deleteMode ? 'Silməni bağla' : 'Şəkil sil'}
+                      <X size={14} /> {deleteMode ? (uiLang === 'ru' ? 'Закрыть удаление' : 'Silməni bağla') : (uiLang === 'ru' ? 'Удалить фото' : 'Şəkil sil')}
                     </button>
                     {!confirmDeleteAll ? (
                       <button
                         onClick={() => setConfirmDeleteAll(true)}
                         className="rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 border border-red-200 text-red-500 bg-white hover:bg-red-50 dark:bg-stone-900"
                       >
-                        <X size={14} /> Hamısını sil
+                        <X size={14} /> {t('deleteAllBtn')}
                       </button>
                     ) : (
-                      <div className="flex items-center gap-1.5 border border-red-200 rounded-lg px-2 py-1 bg-red-50">
-                        <span className="text-xs text-red-600">Əminsiniz?</span>
+                      <div className="flex items-center gap-1.5 border border-red-200 rounded-lg px-2 py-1 bg-red-50 dark:bg-stone-900">
+                        <span className="text-xs text-red-600">{uiLang === 'ru' ? 'Вы уверены?' : 'Əminsiniz?'}</span>
                         <button
                           onClick={() => {
                             setPhotos([]);
@@ -1873,25 +2051,27 @@ export default function App() {
                             setSelected(new Set());
                             setSchedule(null);
                             setConfirmDeleteAll(false);
-                            addToast('Bütün şəkillər silindi', 'info');
+                            addToast(uiLang === 'ru' ? 'Все фото удалены' : 'Bütün şəkillər silindi', 'info');
                           }}
                           className="text-xs bg-red-600 text-white rounded-md px-2 py-1 hover:bg-red-700"
-                        >Bəli, sil</button>
+                        >{uiLang === 'ru' ? 'Да, удалить' : 'Bəli, sil'}</button>
                         <button
                           onClick={() => setConfirmDeleteAll(false)}
                           className="text-xs border border-stone-200 rounded-md px-2 py-1 hover:bg-stone-100 dark:border-stone-700"
-                        >Ləğv et</button>
+                        >{uiLang === 'ru' ? 'Отмена' : 'Ləğv et'}</button>
                       </div>
                     )}
                   </div>
                 </div>
                 {selectMode && (
                   <p className="text-xs text-stone-400 dark:text-stone-500">
-                    Karusel etmək üçün 2+ şəkil seç, aşağıdakı çubuqda "Karusel et" klikləyin. Sonra yeni qrup üçün başqa şəkilləri seç.
+                    {uiLang === 'ru'
+                      ? 'Выбери 2+ фото для карусели, затем нажми "Сделать карусель" на панели ниже. Потом выбери другие фото для новой группы.'
+                      : 'Karusel etmək üçün 2+ şəkil seç, aşağıdakı çubuqda "Karusel et" klikləyin. Sonra yeni qrup üçün başqa şəkilləri seç.'}
                   </p>
                 )}
                 {deleteMode && (
-                  <p className="text-xs text-red-400">Silmək istədiyiniz şəkilin ✕ düyməsinə basın.</p>
+                  <p className="text-xs text-red-400">{uiLang === 'ru' ? 'Нажми ✕ на фото, которое хочешь удалить.' : 'Silmək istədiyiniz şəkilin ✕ düyməsinə basın.'}</p>
                 )}
 
                 <PhotoGrid
@@ -1905,16 +2085,18 @@ export default function App() {
                   <div className="sticky bottom-4 z-30">
                     <div className="bg-stone-900 text-white rounded-2xl px-5 py-3 flex items-center justify-between shadow-xl">
                       <span className="text-sm">
-                        {selected.size === 0 ? 'Karusel üçün şəkillər seçin' : `${selected.size} şəkil seçildi`}
+                        {selected.size === 0
+                          ? (uiLang === 'ru' ? 'Выбери фото для карусели' : 'Karusel üçün şəkillər seçin')
+                          : (uiLang === 'ru' ? `Выбрано фото: ${selected.size}` : `${selected.size} şəkil seçildi`)}
                       </span>
                       <div className="flex gap-2">
                         {selected.size >= 2 && (
                           <button onClick={createCarouselFromSelection} className="bg-orange-500 hover:bg-orange-400 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 font-medium">
-                            <Layers size={14} /> Karusel et ({selected.size})
+                            <Layers size={14} /> {t('carouselBtn')} ({selected.size})
                           </button>
                         )}
                         <button onClick={() => { setSelectMode(false); setSelected(new Set()); }} className="bg-stone-700 hover:bg-stone-600 text-white rounded-lg px-3 py-2 text-sm">
-                          Bağla
+                          {uiLang === 'ru' ? 'Закрыть' : 'Bağla'}
                         </button>
                       </div>
                     </div>
@@ -1925,6 +2107,7 @@ export default function App() {
                   photos={photos} carousels={carousels} suggestedCarousels={suggestedCarousels}
                   onConfirmSuggestion={confirmSuggestion} onDismissSuggestion={dismissSuggestion}
                   onRemoveCarousel={removeCarousel}
+                  uiLang={uiLang}
                 />
               </>
             )}
@@ -1934,11 +2117,11 @@ export default function App() {
         {/* ---- TAB 2: CATEGORIES ---- */}
         {activeTab === 'categories' && (
           <div className="space-y-6">
-            {photos.length === 0 ? <EmptyState text="Əvvəlcə şəkilləri yüklə." /> : (
+            {photos.length === 0 ? <EmptyState text={uiLang === 'ru' ? 'Сначала загрузи фото.' : 'Əvvəlcə şəkilləri yüklə.'} /> : (
               <>
                 <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
-                  <h3 className="menu-font text-lg font-semibold mb-3">Kateqoriya siyahısı</h3>
-                  <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">AI yalnız bu siyahıdan seçəcək.</p>
+                  <h3 className="menu-font text-lg font-semibold mb-3">{t('categoriesTitle')}</h3>
+                  <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">{t('categoriesDesc')}</p>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {categories.map((c, i) => (
                       <span key={c} className={`flex items-center gap-1.5 pl-3 pr-2 py-1 rounded-full text-sm font-medium ${PALETTE[i % PALETTE.length].bg} ${PALETTE[i % PALETTE.length].text}`}>
@@ -1950,24 +2133,24 @@ export default function App() {
                   <div className="flex gap-2">
                     <input value={newCat} onChange={(e) => setNewCat(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') addCategory(); }}
-                      placeholder="Yeni kateqoriya (məs. Şirniyyat)"
+                      placeholder={t('categoryAddPlaceholder')}
                       className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder-stone-500" />
                     <button onClick={addCategory} className="bg-stone-900 text-white rounded-lg px-3 py-2 text-sm flex items-center gap-1 hover:bg-stone-800">
-                      <Plus size={14} /> Əlavə et
+                      <Plus size={14} /> {t('addBtn')}
                     </button>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
                   <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                    <h3 className="menu-font text-lg font-semibold">Şəkillərin kateqoriyası</h3>
+                    <h3 className="menu-font text-lg font-semibold">{t('photoCategoriesTitle')}</h3>
                     <button onClick={runAI} disabled={aiLoading || categories.length === 0}
                       className="bg-orange-600 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-orange-700 disabled:opacity-50">
                       {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                      {aiLoading ? `Təhlil edilir (${aiProgress.done}/${aiProgress.total})` : 'AI ilə təxmin et'}
+                      {aiLoading ? `${uiLang === 'ru' ? 'Анализ' : 'Təhlil edilir'} (${aiProgress.done}/${aiProgress.total})` : t('aiGuessBtn')}
                     </button>
                   </div>
-                  {categorizedCount > 0 && <p className="text-sm text-stone-500 mb-3 dark:text-stone-400">{categorizedCount}/{photos.length} şəkil kateqoriyalandı.</p>}
+                  {categorizedCount > 0 && <p className="text-sm text-stone-500 mb-3 dark:text-stone-400">{categorizedCount}/{photos.length} {t('photoCategoriesProgress')}</p>}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     {(() => {
                       // Carousel üzvlərini qruplaşdır — bir kart kimi göstər
@@ -2035,9 +2218,9 @@ export default function App() {
                                 });
                               }}
                                 className="w-full mt-1 text-sm border border-stone-200 rounded-md px-1.5 py-1 bg-white dark:bg-stone-900 dark:border-stone-700 dark:text-stone-200">
-                                <option value="">— 1ci kateqoriya —</option>
+                                <option value="">{t('cat1Placeholder')}</option>
                                 {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                                <option value="Digər">Digər</option>
+                                <option value="Digər">{t('otherCategory')}</option>
                               </select>
                               {cat1 && (
                                 <select value={cat2} onChange={(e) => {
@@ -2048,9 +2231,9 @@ export default function App() {
                                   });
                                 }}
                                   className="w-full mt-1 text-xs border border-stone-100 rounded-md px-1.5 py-1 bg-stone-50 text-stone-500 dark:bg-stone-950 dark:text-stone-400 dark:border-stone-700">
-                                  <option value="">+ 2ci kateqoriya (istəyə bağlı)</option>
+                                  <option value="">{t('cat2Placeholder')}</option>
                                   {categories.filter(c => c !== cat1).map((c) => <option key={c} value={c}>{c}</option>)}
-                                  {cat1 !== 'Digər' && <option value="Digər">Digər</option>}
+                                  {cat1 !== 'Digər' && <option value="Digər">{t('otherCategory')}</option>}
                                 </select>
                               )}
                               {/* Məhsul adı və Şəxs adı — isteğe bağlı, caption generasiyasında istifadə olunur */}
@@ -2061,7 +2244,7 @@ export default function App() {
                                   const applyTo = item.type === 'carousel' ? item.members : [p];
                                   applyTo.forEach((m) => setPhotoProductName(m.id, e.target.value));
                                 }}
-                                placeholder="Məhsul adı (məs. Strawberry Cheesecake)"
+                                placeholder={t('productNamePlaceholder')}
                                 className="w-full mt-1 text-xs border border-stone-100 rounded-md px-1.5 py-1 bg-white text-stone-600 placeholder-stone-400 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-700 dark:placeholder-stone-500"
                               />
                               <input
@@ -2071,7 +2254,7 @@ export default function App() {
                                   const applyTo = item.type === 'carousel' ? item.members : [p];
                                   applyTo.forEach((m) => setPhotoPersonName(m.id, e.target.value));
                                 }}
-                                placeholder="Şəxs adı (məs. DJ Vugarixx)"
+                                placeholder={t('personNamePlaceholder')}
                                 className="w-full mt-1 text-xs border border-stone-100 rounded-md px-1.5 py-1 bg-white text-stone-600 placeholder-stone-400 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-700 dark:placeholder-stone-500"
                               />
                             </div>
@@ -2093,15 +2276,15 @@ export default function App() {
             <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles size={16} className="text-orange-500" />
-                <h3 className="menu-font text-lg font-semibold">AI Caption Generator</h3>
+                <h3 className="menu-font text-lg font-semibold">{t('aiCaptionGenTitle')}</h3>
               </div>
               <p className="text-stone-500 text-sm mb-4 dark:text-stone-400">
-                AI hər şəkli görür və caption yazır. İstəsən şablon göndər — AI o üslubda yazacaq.
+                {t('aiCaptionGenDesc')}
               </p>
 
               <div className="mb-3">
                 <label className="text-xs font-medium text-stone-500 uppercase tracking-wide block mb-1.5 dark:text-stone-400">
-                  Şablon (istəyə bağlı) — öz captionlarından nümunə yapışdır
+                  {t('captionGuideLabel')}
                 </label>
                 <textarea
                   value={captionGuide}
@@ -2119,8 +2302,8 @@ export default function App() {
                   className="bg-orange-600 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-orange-700 disabled:opacity-50"
                 >
                   {captionGenLoading
-                    ? <><Loader2 size={14} className="animate-spin" /> Yazılır ({captionGenProgress.done}/{captionGenProgress.total})</>
-                    : <><Sparkles size={14} /> Caption yaz</>}
+                    ? <><Loader2 size={14} className="animate-spin" /> {t('generatingBtn')} ({captionGenProgress.done}/{captionGenProgress.total})</>
+                    : <><Sparkles size={14} /> {uiLang === 'ru' ? 'Написать подпись' : 'Caption yaz'}</>}
                 </button>
                 {aiCaptions.size > 0 && !captionGenLoading && (
                   <>
@@ -2128,13 +2311,13 @@ export default function App() {
                       onClick={addAllAiCaptionsToPaste}
                       className="bg-stone-900 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-stone-700"
                     >
-                      ↓ Hamısını paste bölməsinə əlavə et
+                      ↓ {t('addAllToPasteBtn')}
                     </button>
                     <button
                       onClick={copyAllAiCaptions}
                       className="border border-stone-200 rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-stone-50 dark:border-stone-700"
                     >
-                      <Copy size={14} /> Hamısını kopyala
+                      <Copy size={14} /> {t('copyAllBtn')}
                     </button>
                   </>
                 )}
@@ -2186,19 +2369,19 @@ export default function App() {
 
             {/* ---- PASTE SECTION ---- */}
             <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
-              <h3 className="menu-font text-lg font-semibold mb-1">Captionları yapışdır</h3>
+              <h3 className="menu-font text-lg font-semibold mb-1">{t('captionsManualTitle')}</h3>
               <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">
-                Öz captionlarını yaz, ya generate etdiklərini kopyalayıb buraya yapışdır. Hər captionu şəkil nömrəsi ilə başla — məs. <span className="font-mono bg-stone-100 px-1 rounded dark:bg-stone-800">1. Şəhərin ən gözəl mənzərəsi</span>
+                {t('captionsManualDesc')} <span className="font-mono bg-stone-100 px-1 rounded dark:bg-stone-800">{t('captionsManualExample')}</span>
               </p>
               <textarea value={captionsRaw} onChange={(e) => setCaptionsRaw(e.target.value)} rows={12}
-                placeholder={'1. Şəhərin ən gözəl mənzərəsi burada 🌆\n2. Səhərə qəhvə ilə başlamağın əsl adı budur ☕'}
+                placeholder={uiLang === 'ru' ? '1. Лучший вид города здесь 🌆\n2. Так начинается утро с кофе ☕' : '1. Şəhərin ən gözəl mənzərəsi burada 🌆\n2. Səhərə qəhvə ilə başlamağın əsl adı budur ☕'}
                 className="w-full border border-stone-200 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-300 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder-stone-500" />
             </div>
 
             {photos.length > 0 && (
               <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
-                <h3 className="menu-font text-lg font-semibold mb-3">Uyğunluq</h3>
-                <p className="text-sm text-stone-500 mb-3 dark:text-stone-400">{matchedCount}/{photos.length} şəklin captionu tapıldı.</p>
+                <h3 className="menu-font text-lg font-semibold mb-3">{uiLang === 'ru' ? 'Соответствие' : 'Uyğunluq'}</h3>
+                <p className="text-sm text-stone-500 mb-3 dark:text-stone-400">{matchedCount}/{photos.length} {uiLang === 'ru' ? 'подписей фото найдено.' : 'şəklin captionu tapıldı.'}</p>
                 <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
                   {photos.map((p) => {
                     const has = p.number != null && captionsMap.has(p.number);
@@ -2206,7 +2389,7 @@ export default function App() {
                       <div key={p.id} className="flex items-center gap-2 text-sm">
                         <span className="w-8 text-stone-400 font-mono text-xs dark:text-stone-500">{p.number ?? '?'}</span>
                         <span className="flex-1 truncate text-stone-600 dark:text-stone-300">
-                          {has ? captionsMap.get(p.number) : <em className="text-stone-400 dark:text-stone-500">caption tapılmadı</em>}
+                          {has ? captionsMap.get(p.number) : <em className="text-stone-400 dark:text-stone-500">{uiLang === 'ru' ? 'подпись не найдена' : 'caption tapılmadı'}</em>}
                         </span>
                         {has ? <Check size={14} className="text-emerald-500 flex-shrink-0" /> : <AlertCircle size={14} className="text-amber-500 flex-shrink-0" />}
                       </div>
@@ -2224,13 +2407,14 @@ export default function App() {
             {/* Saved plans */}
             {savedPlanKeys.length > 0 && (
               <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
-                <h3 className="menu-font text-lg font-semibold mb-3">Saxlanmış planlar</h3>
+                <h3 className="menu-font text-lg font-semibold mb-3">{uiLang === 'ru' ? 'Сохранённые планы' : 'Saxlanmış planlar'}</h3>
                 <div className="flex flex-wrap gap-2">
                   {savedPlanKeys.map((key) => {
                     // key = plan-YYYY-M
                     const parts = key.replace('plan-', '').split('-');
                     const y = parts[0]; const m = parseInt(parts[1]);
-                    const label = `${MONTHS[m] || m} ${y}`;
+                    const monthsList = uiLang === 'ru' ? MONTHS_RU : MONTHS;
+                    const label = `${monthsList[m] || m} ${y}`;
                     return (
                       <div key={key} className="flex items-center gap-1 border border-stone-200 rounded-lg overflow-hidden dark:border-stone-700">
                         <button onClick={() => loadPlan(key)} className="px-3 py-1.5 text-sm hover:bg-stone-50 text-stone-700 dark:text-stone-300">{label}</button>
@@ -2245,28 +2429,28 @@ export default function App() {
             <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
               <div className="flex flex-wrap items-end gap-3">
                 <div>
-                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">Ay</label>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{t('monthLabel')}</label>
                   <select value={monthIndex} onChange={(e) => setMonthIndex(parseInt(e.target.value))}
                     className="border border-stone-200 rounded-lg px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200">
-                    {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                    {(uiLang === 'ru' ? MONTHS_RU : MONTHS).map((m, i) => <option key={m} value={i}>{m}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">İl</label>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{t('yearLabel')}</label>
                   <input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value) || year)}
                     className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-24 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
                 </div>
                 <button onClick={generateSchedule} disabled={photos.length === 0}
                   className="bg-stone-900 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-stone-800 disabled:opacity-50">
-                  <Calendar size={14} /> Plan yarat
+                  <Calendar size={14} /> {t('generatePlanBtn')}
                 </button>
                 {schedule && (
                   <>
                     <button onClick={generateSchedule} className="bg-white border border-stone-200 rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-stone-50 dark:bg-stone-900 dark:border-stone-700">
-                      <RefreshCw size={14} /> Yenidən qarışdır
+                      <RefreshCw size={14} /> {t('reshuffleBtn')}
                     </button>
                     <button onClick={saveCurrentPlan} className="bg-emerald-600 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-emerald-700">
-                      <Check size={14} /> Planı saxla
+                      <Check size={14} /> {t('savePlanBtn')}
                     </button>
                   </>
                 )}
@@ -2290,7 +2474,9 @@ export default function App() {
               {isScheduleStale && (
                 <div className="mt-4 pt-4 border-t border-stone-100 flex items-center gap-2 text-amber-700 bg-amber-50 rounded-lg px-3 py-2 text-sm">
                   <AlertCircle size={14} className="flex-shrink-0" />
-                  Kateqoriya, caption və ya karusellərdə dəyişiklik etmisiniz — bu plan köhnəlmiş ola bilər. "Yenidən qarışdır" düyməsi ilə yeniləyin.
+                  {uiLang === 'ru'
+                    ? 'Вы изменили категории, подписи или карусели — этот план может быть устаревшим. Обновите его кнопкой "Перемешать снова".'
+                    : 'Kateqoriya, caption və ya karusellərdə dəyişiklik etmisiniz — bu plan köhnəlmiş ola bilər. "Yenidən qarışdır" düyməsi ilə yeniləyin.'}
                 </div>
               )}
             </div>
@@ -2304,6 +2490,7 @@ export default function App() {
                 copyStatus={copyStatus}
                 onReorderPost={handleReorderPost}
                 onEditCaption={handleEditCaption}
+                uiLang={uiLang}
               />
             )}
           </div>
