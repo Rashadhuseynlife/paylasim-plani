@@ -1058,15 +1058,6 @@ export default function App() {
   // Yalnız son əməliyyatı geri qaytarır. Şəkil/karusel silmə kimi
   // dağıdıcı əməliyyatlardan əvvəl bura bir "snapshot" qoyulur.
   const [undoSnapshot, setUndoSnapshot] = useState(null);
-  const pushUndoSnapshot = useCallback((photosSnap, carouselsSnap) => {
-    setUndoSnapshot({ photos: photosSnap, carousels: carouselsSnap });
-  }, []);
-  const performUndo = useCallback(() => {
-    if (!undoSnapshot) return;
-    setPhotos(undoSnapshot.photos);
-    setCarousels(undoSnapshot.carousels);
-    setUndoSnapshot(null);
-  }, [undoSnapshot]);
 
   // ── Toplu redaktə (kateqoriya tab-ında) ──────────────────────────
   const [bulkEditMode, setBulkEditMode] = useState(false);
@@ -1074,33 +1065,6 @@ export default function App() {
   const [bulkCategory, setBulkCategory] = useState('');
   const [bulkProductName, setBulkProductName] = useState('');
   const [bulkPersonName, setBulkPersonName] = useState('');
-
-  const toggleBulkSelect = useCallback((photoId) => {
-    setBulkSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(photoId)) next.delete(photoId); else next.add(photoId);
-      return next;
-    });
-  }, []);
-
-  const applyBulkEdit = useCallback(() => {
-    if (bulkSelected.size === 0) return;
-    pushUndoSnapshot(photos, carousels);
-    setPhotos((prev) => prev.map((p) => {
-      if (!bulkSelected.has(p.id)) return p;
-      const updated = { ...p };
-      if (bulkCategory) updated.category = bulkCategory;
-      if (bulkProductName.trim()) updated.productName = bulkProductName.trim();
-      if (bulkPersonName.trim()) updated.personName = bulkPersonName.trim();
-      return updated;
-    }));
-    addToast(`${bulkSelected.size} ${uiLang === 'ru' ? 'фото обновлено' : 'şəkil yeniləndi'}`, 'success');
-    setBulkSelected(new Set());
-    setBulkCategory('');
-    setBulkProductName('');
-    setBulkPersonName('');
-    setBulkEditMode(false);
-  }, [bulkSelected, bulkCategory, bulkProductName, bulkPersonName, photos, carousels, pushUndoSnapshot, addToast, uiLang]);
 
   const [venueName, setVenueName] = useState('');
   const [venuePresets, setVenuePresets] = useState(INITIAL_VENUE_PRESETS);
@@ -1144,6 +1108,34 @@ export default function App() {
     try { localStorage.setItem('pp-profiles', JSON.stringify(list)); } catch { /* ignore */ }
   }, []);
 
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [newProfileInput, setNewProfileInput] = useState('');
+
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiProgress, setAiProgress] = useState({ done: 0, total: 0 });
+  const [activeTab, setActiveTab] = useState('photos');
+  const [dragOver, setDragOver] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
+  const [carousels, setCarousels] = useState([]);
+  const [selectMode, setSelectMode] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [suggestedCarousels, setSuggestedCarousels] = useState([]);
+  const [aiCarouselLoading, setAiCarouselLoading] = useState(false);
+  const [published, setPublished] = useState(new Set());
+  const [savedPlanKeys, setSavedPlanKeys] = useState([]);
+  const [captionGuide, setCaptionGuide] = useState('');
+  const [aiCaptions, setAiCaptions] = useState(new Map());
+  const [captionGenLoading, setCaptionGenLoading] = useState(false);
+  const [captionGenProgress, setCaptionGenProgress] = useState({ done: 0, total: 0 });
+  const [copiedGenCaption, setCopiedGenCaption] = useState(null);
+  const [regenLoadingNums, setRegenLoadingNums] = useState(new Set());
+
+  // switchProfile/addProfile/removeProfile bura (bütün lazımi state-lərdən
+  // sonra) köçürülüb — əvvəlcə daha yuxarıda idi, amma orda hələ təyin
+  // olunmamış state-lərə (carousels, schedule, aiCaptions və s.) istinad
+  // etdiyi üçün build zamanı "Cannot access before initialization" xətası
+  // yaranırdı (minifaylaşdırılmış kodda dəyişən sıralanması TDZ-ə düşürdü).
   const switchProfile = useCallback((name) => {
     setActiveProfile(name);
     try { localStorage.setItem('pp-active-profile', name); } catch { /* ignore */ }
@@ -1177,28 +1169,7 @@ export default function App() {
     persistProfiles(next);
     if (activeProfile === name) switchProfile(next[0] || 'Əsas');
   }, [profiles, persistProfiles, activeProfile, switchProfile]);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [newProfileInput, setNewProfileInput] = useState('');
 
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiProgress, setAiProgress] = useState({ done: 0, total: 0 });
-  const [activeTab, setActiveTab] = useState('photos');
-  const [dragOver, setDragOver] = useState(false);
-  const [copyStatus, setCopyStatus] = useState('');
-  const [carousels, setCarousels] = useState([]);
-  const [selectMode, setSelectMode] = useState(false);
-  const [deleteMode, setDeleteMode] = useState(false);
-  const [selected, setSelected] = useState(new Set());
-  const [suggestedCarousels, setSuggestedCarousels] = useState([]);
-  const [aiCarouselLoading, setAiCarouselLoading] = useState(false);
-  const [published, setPublished] = useState(new Set());
-  const [savedPlanKeys, setSavedPlanKeys] = useState([]);
-  const [captionGuide, setCaptionGuide] = useState('');
-  const [aiCaptions, setAiCaptions] = useState(new Map());
-  const [captionGenLoading, setCaptionGenLoading] = useState(false);
-  const [captionGenProgress, setCaptionGenProgress] = useState({ done: 0, total: 0 });
-  const [copiedGenCaption, setCopiedGenCaption] = useState(null);
-  const [regenLoadingNums, setRegenLoadingNums] = useState(new Set());
   // YENİ: çoxlu AI provayder dəstəyi
   const [aiProvider, setAiProvider] = useState('anthropic');
   const [aiSettings, setAiSettings] = useState({
@@ -1215,6 +1186,48 @@ export default function App() {
   const [keyVerifyStatus, setKeyVerifyStatus] = useState({});
   const fileInputRef = useRef(null);
   const { toasts, add: addToast, remove: removeToast } = useToast();
+
+  // pushUndoSnapshot/performUndo/toggleBulkSelect/applyBulkEdit bura (bütün
+  // lazımi state-lərdən, xüsusən carousels və addToast-dan sonra) köçürülüb
+  // — əvvəlcə daha yuxarıda idi, amma hələ təyin olunmamış dəyişənlərə
+  // istinad etdiyi üçün build zamanı "Cannot access before initialization"
+  // xətası yaranırdı.
+  const pushUndoSnapshot = useCallback((photosSnap, carouselsSnap) => {
+    setUndoSnapshot({ photos: photosSnap, carousels: carouselsSnap });
+  }, []);
+  const performUndo = useCallback(() => {
+    if (!undoSnapshot) return;
+    setPhotos(undoSnapshot.photos);
+    setCarousels(undoSnapshot.carousels);
+    setUndoSnapshot(null);
+  }, [undoSnapshot]);
+
+  const toggleBulkSelect = useCallback((photoId) => {
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(photoId)) next.delete(photoId); else next.add(photoId);
+      return next;
+    });
+  }, []);
+
+  const applyBulkEdit = useCallback(() => {
+    if (bulkSelected.size === 0) return;
+    pushUndoSnapshot(photos, carousels);
+    setPhotos((prev) => prev.map((p) => {
+      if (!bulkSelected.has(p.id)) return p;
+      const updated = { ...p };
+      if (bulkCategory) updated.category = bulkCategory;
+      if (bulkProductName.trim()) updated.productName = bulkProductName.trim();
+      if (bulkPersonName.trim()) updated.personName = bulkPersonName.trim();
+      return updated;
+    }));
+    addToast(`${bulkSelected.size} ${uiLang === 'ru' ? 'фото обновлено' : 'şəkil yeniləndi'}`, 'success');
+    setBulkSelected(new Set());
+    setBulkCategory('');
+    setBulkProductName('');
+    setBulkPersonName('');
+    setBulkEditMode(false);
+  }, [bulkSelected, bulkCategory, bulkProductName, bulkPersonName, photos, carousels, pushUndoSnapshot, addToast, uiLang]);
 
   /* ---------------------------------------------------------------- */
   /* Dark mode — sistem ayarına görə avtomatik başlayır, istifadəçi    */
