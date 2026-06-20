@@ -1952,7 +1952,12 @@ export default function App() {
               onChange={(e) => setIncludeRussian(e.target.checked)}
               className="rounded border-stone-300 dark:border-stone-600 text-orange-600 focus:ring-orange-400"
             />
-            {t('russianToggle')}
+            <svg width="14" height="10" viewBox="0 0 21 14" className="flex-shrink-0 rounded-sm" style={{ display: 'inline-block' }}>
+              <rect width="21" height="14" fill="#fff" />
+              <rect y="4.66" width="21" height="4.66" fill="#0039A6" />
+              <rect y="9.33" width="21" height="4.67" fill="#D52B1E" />
+            </svg>
+            {uiLang === 'ru' ? 'Добавить русский перевод к подписи (AZ + RU в одной подписи)' : 'Rus dili tərcüməsini caption-a əlavə et (AZ + RU bir caption-da)'}
           </label>
         </div>
 
