@@ -2921,17 +2921,14 @@ export default function App() {
             href="https://www.instagram.com/fabrikamedia.az/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity"
+            className="opacity-70 hover:opacity-100 transition-opacity"
             title="Fabrika Media — Instagram"
           >
             <img
               src={darkMode ? fabrikaIconLight : fabrikaIconDark}
               alt="Fabrika Media"
-              className="h-5 w-auto"
+              className="h-6 w-auto"
             />
-            <span className="menu-font text-lg font-semibold text-stone-700 dark:text-stone-200 tracking-tight">
-              fabrika
-            </span>
           </a>
           <p className="text-[11px] text-stone-400 dark:text-stone-500">
             {uiLang === 'ru' ? 'Создано' : 'Created by'}{' '}
