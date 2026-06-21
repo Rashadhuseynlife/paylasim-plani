@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 895.61 223.12">
+  <defs>
+    <style>
+      .cls-1, .cls-2, .cls-3, .cls-4 {
+        fill: #231f20;
+      }
+
+      .cls-1, .cls-2, .cls-5, .cls-4 {
+        isolation: isolate;
+      }
+
+      .cls-1, .cls-2, .cls-4 {
+        font-family: Arial-BoldMT, Arial;
+        font-size: 180px;
+        font-weight: 700;
+      }
+
+      .cls-2 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-4 {
+        letter-spacing: -.04em;
+      }
+    </style>
+  </defs>
+  <g id="Layer_2-2" data-name="Layer 2">
+    <g id="Layer_1-2" data-name="Layer 1-2">
+      <path class="cls-3" d="M18.26,0h141.18c10.08,0,18.26,8.17,18.26,18.25h0c0,10.08-8.18,18.25-18.26,18.25H18.26C8.18,36.51,0,28.34,0,18.25h0C0,8.17,8.18,0,18.26,0Z"/>
+      <path class="cls-3" d="M228.13,0h27.31c10.08,0,18.26,8.17,18.26,18.25h0c0,10.08-8.18,18.25-18.26,18.25h-27.31c-10.08,0-18.26-8.17-18.26-18.25h0c0-10.08,8.18-18.25,18.26-18.25Z"/>
+      <path class="cls-3" d="M17.87,64.09h85.03c9.87,0,17.87,8,17.87,17.87h0c0,9.87-8,17.87-17.87,17.87H17.87c-9.87,0-17.87-8-17.87-17.87h0c0-9.87,8-17.87,17.87-17.87Z"/>
+      <path class="cls-3" d="M170.81,64.09h85.03c9.87,0,17.87,8,17.87,17.87h0c0,9.87-8,17.87-17.87,17.87h-85.03c-9.87,0-17.87-8-17.87-17.87h0c0-9.87,8-17.87,17.87-17.87Z"/>
+      <path class="cls-3" d="M17.87,127.4h27.58c9.87,0,17.87,8,17.87,17.87h0c0,9.87-8,17.87-17.87,17.87h-27.58c-9.87,0-17.87-8-17.87-17.87h0c0-9.87,8-17.87,17.87-17.87Z"/>
+      <path class="cls-3" d="M113.61,127.4h142.22c9.87,0,17.87,8,17.87,17.87h0c0,9.87-8,17.87-17.87,17.87H113.61c-9.87,0-17.87-8-17.87-17.87h0c0-9.87,8-17.87,17.87-17.87Z"/>
+      <g class="cls-5">
+        <text class="cls-2" transform="translate(291.83 155.36)"><tspan x="0" y="0">f</tspan></text>
+        <text class="cls-1" transform="translate(369.41 155.36)"><tspan x="0" y="0">abri</tspan></text>
+        <text class="cls-4" transform="translate(693.8 155.36)"><tspan x="0" y="0">k</tspan></text>
+        <text class="cls-1" transform="translate(795.5 155.36)"><tspan x="0" y="0">a</tspan></text>
+      </g>
+    </g>
+  </g>
+</svg>
