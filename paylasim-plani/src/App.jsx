@@ -4,8 +4,10 @@ import {
   AlertCircle, Check, Calendar, Layers, Unlink, CheckCircle2, Circle,
   RotateCcw, FileText, XCircle, Info, Sun, Moon,
 } from 'lucide-react';
-import fabrikaDarkLogo from './assets/fabrika-dark.svg';
-import fabrikaLightLogo from './assets/fabrika-light.svg';
+import fabrikaIconDark from './assets/fabrika-icon-dark.svg';
+import fabrikaIconLight from './assets/fabrika-icon-light.svg';
+import azerbaijanFlagSrc from './assets/azerbaijan.svg';
+import russiaFlagSrc from './assets/russia.svg';
 
 /* ====================================================================
    İNTERFEYS TƏRCÜMƏ LÜĞƏTİ (AZ / RU)
@@ -573,7 +575,7 @@ const WORKER_URL = 'https://cold-meadow-6bb3.rashadhuseyn1993.workers.dev';
 
 // Bütün AI çağırışları Worker vasitəsilə gedir.
 // Provider seçilir, Worker həm açarı, həm fallback-i idarə edir.
-async function callAI({ provider, model, system, userText, imageBase64, maxTokens = 200 }) {
+async function callAI({ provider, model, system, userText, imageBase64, maxTokens = 200, signal }) {
   // Anthropic üçün məzmun formatı
   const anthropicContent = [{ type: 'text', text: userText }];
   if (imageBase64) anthropicContent.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } });
@@ -590,6 +592,7 @@ if (provider === 'anthropic') {
     const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal,
       body: JSON.stringify({
         provider: 'anthropic',
         model: model || 'claude-sonnet-4-6',
@@ -615,6 +618,7 @@ if (provider === 'anthropic') {
   const res = await fetch(WORKER_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal,
     body: JSON.stringify({
       provider,
       model: model || (provider === 'gemini' ? 'gemini-2.0-flash' : 'gpt-4o-mini'),
@@ -690,6 +694,9 @@ async function callAIWithFallback({ primaryProvider, aiSettings, onFallback, ...
       return result;
     } catch (err) {
       lastErr = err;
+      // İstifadəçi dayandırma düyməsinə basıbsa (AbortError), fallback-a
+      // keçmədən dərhal atırıq — yedək provayderə keçmək məntiqsizdir.
+      if (err.name === 'AbortError') throw err;
       // Yalnız limit/overload xətasında fallback edirik
       // Digər xətalarda (auth xətası, şəbəkə xətası) dərhal atırıq
       const shouldFallback = err.isRateLimit || isRateLimitOrOverload(err);
@@ -707,28 +714,11 @@ async function callAIWithFallback({ primaryProvider, aiSettings, onFallback, ...
 /* ---------------------------------------------------------------- */
 
 function RussianFlag({ className = '' }) {
-  return (
-    <svg width="14" height="10" viewBox="0 0 21 14" className={`flex-shrink-0 rounded-sm ${className}`} style={{ display: 'inline-block' }}>
-      <rect width="21" height="14" fill="#fff" />
-      <rect y="4.66" width="21" height="4.66" fill="#0039A6" />
-      <rect y="9.33" width="21" height="4.67" fill="#D52B1E" />
-    </svg>
-  );
+  return <img src={russiaFlagSrc} alt="RU" className={`flex-shrink-0 rounded-sm inline-block ${className}`} style={{ width: 14, height: 10, objectFit: 'cover' }} />;
 }
 
 function AzerbaijanFlag({ className = '' }) {
-  return (
-    <svg width="14" height="10" viewBox="0 0 21 14" className={`flex-shrink-0 rounded-sm ${className}`} style={{ display: 'inline-block' }}>
-      <rect width="21" height="14" fill="#3F9C35" />
-      <rect y="4.66" width="21" height="4.66" fill="#ED2939" />
-      <rect y="9.33" width="21" height="4.67" fill="#00B9E4" />
-      <circle cx="11" cy="7" r="2.3" fill="#fff" />
-      <circle cx="11.7" cy="7" r="1.9" fill="#ED2939" />
-      <g fill="#fff">
-        <polygon points="13.2,5.3 13.6,6.2 14.6,6.2 13.8,6.8 14.1,7.7 13.2,7.1 12.4,7.7 12.7,6.8 11.9,6.2 12.9,6.2" />
-      </g>
-    </svg>
-  );
+  return <img src={azerbaijanFlagSrc} alt="AZ" className={`flex-shrink-0 rounded-sm inline-block ${className}`} style={{ width: 14, height: 10, objectFit: 'cover' }} />;
 }
 
 function EmptyState({ text }) {
@@ -845,11 +835,13 @@ function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSugge
 }
 
 /* --- ScheduleView --- */
-function ScheduleView({ schedule, monthIndex, year, published, categories, onTogglePublished, onResetPublished, onCopy, onDownload, onExportPDF, copyStatus, onReorderPost, onEditCaption, uiLang = 'az' }) {
+function ScheduleView({ schedule, monthIndex, year, published, categories, onTogglePublished, onResetPublished, onCopy, onDownload, onExportPDF, copyStatus, onReorderPost, onEditCaption, onMovePostToDay, uiLang = 'az' }) {
   const [filter, setFilter] = useState('all');
   const [editingCaption, setEditingCaption] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [copiedCaption, setCopiedCaption] = useState(null);
+  const [movingPostId, setMovingPostId] = useState(null);
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const allPosts = schedule.flatMap((d) => d.posts);
   const totalPosts = allPosts.length;
   const doneCount = allPosts.filter((p) => published.has(p.id)).length;
@@ -1015,7 +1007,7 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                               ) : (
                                 <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle size={12} /> {uiLang === 'ru' ? 'Подпись не найдена' : 'Caption tapılmadı'}</p>
                               )}
-                              <div className="flex gap-1.5 mt-1.5">
+                              <div className="flex gap-1.5 mt-1.5 flex-wrap items-center">
                                 <button
                                   onClick={() => startEdit(post)}
                                   className="text-[10px] border border-stone-200 rounded-md px-1.5 py-0.5 text-stone-500 hover:bg-stone-100 flex items-center gap-0.5 dark:text-stone-400 dark:border-stone-700"
@@ -1027,6 +1019,29 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                                     className="text-[10px] border border-stone-200 rounded-md px-1.5 py-0.5 text-stone-500 hover:bg-stone-100 flex items-center gap-0.5 dark:text-stone-400 dark:border-stone-700"
                                     title={uiLang === 'ru' ? 'Копировать' : 'Kopyala'}
                                   >{isCopied ? (uiLang === 'ru' ? '✓ Скопировано' : '✓ Kopyalandı') : (uiLang === 'ru' ? '📋 Копировать' : '📋 Kopyala')}</button>
+                                )}
+                                {movingPostId === post.id ? (
+                                  <select
+                                    autoFocus
+                                    defaultValue={day.day}
+                                    onChange={(e) => {
+                                      const toDay = parseInt(e.target.value, 10);
+                                      onMovePostToDay(post.id, day.day, toDay);
+                                      setMovingPostId(null);
+                                    }}
+                                    onBlur={() => setMovingPostId(null)}
+                                    className="text-[10px] border border-orange-300 rounded-md px-1 py-0.5 bg-white dark:bg-stone-800 dark:text-stone-200"
+                                  >
+                                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
+                                      <option key={d} value={d}>{d}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <button
+                                    onClick={() => setMovingPostId(post.id)}
+                                    className="text-[10px] border border-stone-200 rounded-md px-1.5 py-0.5 text-stone-500 hover:bg-stone-100 flex items-center gap-0.5 dark:text-stone-400 dark:border-stone-700"
+                                    title={uiLang === 'ru' ? 'Перенести на другой день' : 'Başqa günə köçür'}
+                                  >📅 {uiLang === 'ru' ? 'Перенести' : 'Günü dəyiş'}</button>
                                 )}
                               </div>
                             </>
@@ -1112,6 +1127,10 @@ export default function App() {
   const [newProfileInput, setNewProfileInput] = useState('');
 
   const [aiLoading, setAiLoading] = useState(false);
+  // Dayandırma (abort) üçün hər AI funksiyasının öz controller referansı —
+  // istifadəçi "Dayandır" düyməsinə basanda davam edən fetch sorğuları
+  // ləğv edilir, əlavə token xərclənmir.
+  const aiAbortRef = useRef(null);
   const [aiProgress, setAiProgress] = useState({ done: 0, total: 0 });
   const [activeTab, setActiveTab] = useState('photos');
   const [dragOver, setDragOver] = useState(false);
@@ -1122,11 +1141,13 @@ export default function App() {
   const [selected, setSelected] = useState(new Set());
   const [suggestedCarousels, setSuggestedCarousels] = useState([]);
   const [aiCarouselLoading, setAiCarouselLoading] = useState(false);
+  const aiCarouselAbortRef = useRef(null);
   const [published, setPublished] = useState(new Set());
   const [savedPlanKeys, setSavedPlanKeys] = useState([]);
   const [captionGuide, setCaptionGuide] = useState('');
   const [aiCaptions, setAiCaptions] = useState(new Map());
   const [captionGenLoading, setCaptionGenLoading] = useState(false);
+  const captionGenAbortRef = useRef(null);
   const [captionGenProgress, setCaptionGenProgress] = useState({ done: 0, total: 0 });
   const [copiedGenCaption, setCopiedGenCaption] = useState(null);
   const [regenLoadingNums, setRegenLoadingNums] = useState(new Set());
@@ -1422,6 +1443,8 @@ export default function App() {
   const runAI = useCallback(async () => {
     if (photos.length === 0 || categories.length === 0) return;
     const cfg = aiSettings[aiProvider] || {};
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
     setAiLoading(true);
     setAiProgress({ done: 0, total: photos.length });
 
@@ -1442,6 +1465,7 @@ export default function App() {
     let aiDoneCount = 0;
     const categoryResults = new Map();
     let hadError = false;
+    let wasAborted = false;
 
     const fetchCategory = async (p) => {
       try {
@@ -1452,9 +1476,11 @@ export default function App() {
           userText: `Bu şəkilə bax. Yalnız aşağıdakı siyahıdan BİR kateqoriya adı yaz — başqa heç nə əlavə etmə:\n- ${catList}`,
           imageBase64: p.dataUrl.split(',')[1],
           maxTokens: 20,
+          signal: controller.signal,
         });
         return matchCat(raw);
       } catch (e) {
+        if (e.name === 'AbortError') throw e;
         hadError = true;
         console.error('Category fetch error:', e);
         return p.category || 'Digər';
@@ -1462,27 +1488,43 @@ export default function App() {
     };
 
     const CONCURRENCY = 3;
-    for (let i = 0; i < photoList.length; i += CONCURRENCY) {
-      const chunk = photoList.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map((p) => fetchCategory(p)));
-      results.forEach((cat, idx) => {
-        categoryResults.set(chunk[idx].id, cat);
-        aiDoneCount++;
-      });
-      const snap = new Map(categoryResults);
-      setPhotos((prev) => prev.map((p) => snap.has(p.id) ? { ...p, category: snap.get(p.id) } : p));
-      setAiProgress({ done: aiDoneCount, total: photoList.length });
+    try {
+      for (let i = 0; i < photoList.length; i += CONCURRENCY) {
+        if (controller.signal.aborted) { wasAborted = true; break; }
+        const chunk = photoList.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(chunk.map((p) => fetchCategory(p)));
+        results.forEach((cat, idx) => {
+          categoryResults.set(chunk[idx].id, cat);
+          aiDoneCount++;
+        });
+        const snap = new Map(categoryResults);
+        setPhotos((prev) => prev.map((p) => snap.has(p.id) ? { ...p, category: snap.get(p.id) } : p));
+        setAiProgress({ done: aiDoneCount, total: photoList.length });
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') wasAborted = true;
+      else throw e;
     }
 
     setAiLoading(false);
+    aiAbortRef.current = null;
     setSchedule(null);
-    if (hadError) addToast('Bəzi şəkillər "Digər" kateqoriyasına yerləşdirildi', 'error');
+    if (wasAborted) addToast(uiLang === 'ru' ? 'Остановлено' : 'Dayandırıldı', 'info');
+    else if (hadError) addToast('Bəzi şəkillər "Digər" kateqoriyasına yerləşdirildi', 'error');
     else addToast('AI kateqoriyalaşdırma tamamlandı ✓', 'success');
-  }, [photos, categories, aiProvider, aiSettings, addToast]);
+  }, [photos, categories, aiProvider, aiSettings, addToast, uiLang]);
+
+  const stopAI = useCallback(() => {
+    if (aiAbortRef.current) aiAbortRef.current.abort();
+  }, []);
+
+
 
   const runAICarousel = useCallback(async () => {
     if (photos.length < 2) return;
     const cfg = aiSettings[aiProvider] || {};
+    const controller = new AbortController();
+    aiCarouselAbortRef.current = controller;
     setAiCarouselLoading(true);
 
     const alreadyGrouped = new Set();
@@ -1491,12 +1533,14 @@ export default function App() {
     if (eligible.length < 2) {
       addToast('Qruplaşdırılmamış ən azı 2 şəkil lazımdır', 'info');
       setAiCarouselLoading(false);
+      aiCarouselAbortRef.current = null;
       return;
     }
 
     // Step 1: Get a short visual description + subject tag for each photo (concurrency=4)
     const descriptions = [];
     let doneDesc = 0;
+    let wasAborted = false;
 
     const fetchDesc = async (p) => {
       try {
@@ -1508,6 +1552,7 @@ export default function App() {
           userText: 'Bu şəkili təsvir et.',
           imageBase64: p.dataUrl.split(',')[1],
           maxTokens: 80,
+          signal: controller.signal,
         });
         const raw = raw0.replace(/```json|```/g, '').trim();
         const m = raw.match(/\{[\s\S]*?\}/);
@@ -1516,18 +1561,25 @@ export default function App() {
           return { photoId: p.id, number: p.number, subject: parsed.subject || '', detail: parsed.detail || '' };
         }
         return { photoId: p.id, number: p.number, subject: raw.slice(0, 40), detail: '' };
-      } catch {
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
         return { photoId: p.id, number: p.number, subject: '', detail: '' };
       }
     };
 
-    const CONCURRENCY = 4;
-    for (let i = 0; i < eligible.length; i += CONCURRENCY) {
-      const chunk = eligible.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map((p) => fetchDesc(p)));
-      results.forEach((r) => descriptions.push(r));
-      doneDesc += chunk.length;
-      addToast(`Şəkillər analiz edilir: ${doneDesc}/${eligible.length}`, 'info');
+    try {
+      const CONCURRENCY = 4;
+      for (let i = 0; i < eligible.length; i += CONCURRENCY) {
+        if (controller.signal.aborted) { wasAborted = true; break; }
+        const chunk = eligible.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(chunk.map((p) => fetchDesc(p)));
+        results.forEach((r) => descriptions.push(r));
+        doneDesc += chunk.length;
+        addToast(`Şəkillər analiz edilir: ${doneDesc}/${eligible.length}`, 'info');
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') wasAborted = true;
+      else throw e;
     }
 
     // Step 2: Find similar pairs by sending descriptions (no images) to AI
@@ -1535,33 +1587,40 @@ export default function App() {
     const newSuggestions = [];
     const usedNumbers = new Set();
 
-    const matchChunkSize = 20;
-    for (let i = 0; i < descriptions.length; i += matchChunkSize) {
-      const chunk = descriptions.slice(i, i + matchChunkSize);
-      const descText = chunk.map((d) => `#${d.number}: mövzu="${d.subject}" detal="${d.detail}"`).join('\n');
-      try {
-        const raw0 = await callAIWithFallback({
-          primaryProvider: aiProvider,
-          aiSettings,
-          onFallback: (from, to) => addToast(`⚡ ${from} limiti → ${to}-ə keçildi`, 'info'),
-          system: 'Sən Instagram karusel planlayıcısısan. Şəkil təsvirlərini analiz et, eyni mövzunu fərqli bucaqdan göstərən şəkilləri tap. Yalnız JSON array cavab ver, başqa heç nə yazma.',
-          userText: `Bu şəkillərin arasında hansılar eyni yeməyi/içkini/yeri fərqli bucaqdan göstərir? Karusel üçün qruplaşdır.\n\nŞəkillər:\n${descText}\n\nCavab formatı: [{"numbers":[1,3]},{"numbers":[2,7,9]}]. Əgər oxşar yoxdursa: []`,
-          maxTokens: 600,
-        });
-        const raw = raw0.replace(/```json|```/g, '').trim();
-        const m = raw.match(/\[[\s\S]*\]/);
-        if (m) {
-          const parsed = JSON.parse(m[0]);
-          parsed.forEach(({ numbers }) => {
-            if (!Array.isArray(numbers) || numbers.length < 2) return;
-            const sorted = [...numbers].sort((a, b) => a - b);
-            if (!sorted.some((n) => usedNumbers.has(n))) {
-              newSuggestions.push(sorted);
-              sorted.forEach((n) => usedNumbers.add(n));
-            }
+    if (!wasAborted) {
+      const matchChunkSize = 20;
+      for (let i = 0; i < descriptions.length; i += matchChunkSize) {
+        if (controller.signal.aborted) { wasAborted = true; break; }
+        const chunk = descriptions.slice(i, i + matchChunkSize);
+        const descText = chunk.map((d) => `#${d.number}: mövzu="${d.subject}" detal="${d.detail}"`).join('\n');
+        try {
+          const raw0 = await callAIWithFallback({
+            primaryProvider: aiProvider,
+            aiSettings,
+            onFallback: (from, to) => addToast(`⚡ ${from} limiti → ${to}-ə keçildi`, 'info'),
+            system: 'Sən Instagram karusel planlayıcısısan. Şəkil təsvirlərini analiz et, eyni mövzunu fərqli bucaqdan göstərən şəkilləri tap. Yalnız JSON array cavab ver, başqa heç nə yazma.',
+            userText: `Bu şəkillərin arasında hansılar eyni yeməyi/içkini/yeri fərqli bucaqdan göstərir? Karusel üçün qruplaşdır.\n\nŞəkillər:\n${descText}\n\nCavab formatı: [{"numbers":[1,3]},{"numbers":[2,7,9]}]. Əgər oxşar yoxdursa: []`,
+            maxTokens: 600,
+            signal: controller.signal,
           });
+          const raw = raw0.replace(/```json|```/g, '').trim();
+          const m = raw.match(/\[[\s\S]*\]/);
+          if (m) {
+            const parsed = JSON.parse(m[0]);
+            parsed.forEach(({ numbers }) => {
+              if (!Array.isArray(numbers) || numbers.length < 2) return;
+              const sorted = [...numbers].sort((a, b) => a - b);
+              if (!sorted.some((n) => usedNumbers.has(n))) {
+                newSuggestions.push(sorted);
+                sorted.forEach((n) => usedNumbers.add(n));
+              }
+            });
+          }
+        } catch (e) {
+          if (e.name === 'AbortError') { wasAborted = true; break; }
+          /* ignore other errors */
         }
-      } catch { /* ignore */ }
+      }
     }
 
     if (newSuggestions.length > 0) {
@@ -1575,15 +1634,26 @@ export default function App() {
         return merged;
       });
       addToast(`${newSuggestions.length} karusel təklifi tapıldı ✓`, 'success');
+    } else if (wasAborted) {
+      addToast(uiLang === 'ru' ? 'Остановлено' : 'Dayandırıldı', 'info');
     } else {
       addToast('Oxşar şəkil tapılmadı', 'info');
     }
     setAiCarouselLoading(false);
-  }, [photos, carousels, aiProvider, aiSettings, addToast]);
+    aiCarouselAbortRef.current = null;
+  }, [photos, carousels, aiProvider, aiSettings, addToast, uiLang]);
+
+  const stopAICarousel = useCallback(() => {
+    if (aiCarouselAbortRef.current) aiCarouselAbortRef.current.abort();
+  }, []);
+
+
 
   const runCaptionGen = useCallback(async () => {
     if (photos.length === 0) return;
     const cfg = aiSettings[aiProvider] || {};
+    const controller = new AbortController();
+    captionGenAbortRef.current = controller;
     setCaptionGenLoading(true);
     const venueRef = venueName.trim() || 'bizim kafemiz';
     const guideSection = captionGuide.trim()
@@ -1675,6 +1745,7 @@ export default function App() {
           // Cover şəkilini göndər (carousel üçün ilk şəkil)
           imageBase64: item.cover.dataUrl.split(',')[1],
           maxTokens: includeRussian ? 450 : 250,
+          signal: controller.signal,
         });
 
         if (text) {
@@ -1687,6 +1758,7 @@ export default function App() {
         }
         return text || null;
       } catch (e) {
+        if (e.name === 'AbortError') throw e;
         console.error('Caption fetch error:', e);
         return null;
       }
@@ -1696,28 +1768,41 @@ export default function App() {
     // əvvəlki nəticələri görməsinə mane olurdu və captionlar bir-birinə çox
     // bənzəyirdi (məs. çoxu "Vista-da..." ilə başlayırdı). İndi ardıcıl
     // (sequential) işləyir — hər addım əvvəlki açılışları nəzərə alır.
-    for (let i = 0; i < workItems.length; i++) {
-      const item = workItems[i];
-      const caption = await fetchCaption(item, i);
-      if (caption === null) {
-        hadError = true;
-      } else {
-        resultMap.set(item.cover.number, caption);
-        if (item.type === 'carousel') {
-          item.members.forEach((m) => {
-            if (m.number !== item.cover.number) resultMap.delete(m.number);
-          });
+    let wasAborted = false;
+    try {
+      for (let i = 0; i < workItems.length; i++) {
+        if (controller.signal.aborted) { wasAborted = true; break; }
+        const item = workItems[i];
+        const caption = await fetchCaption(item, i);
+        if (caption === null) {
+          hadError = true;
+        } else {
+          resultMap.set(item.cover.number, caption);
+          if (item.type === 'carousel') {
+            item.members.forEach((m) => {
+              if (m.number !== item.cover.number) resultMap.delete(m.number);
+            });
+          }
         }
+        captionDoneCount++;
+        setAiCaptions(new Map(resultMap));
+        setCaptionGenProgress({ done: captionDoneCount, total: workItems.length });
       }
-      captionDoneCount++;
-      setAiCaptions(new Map(resultMap));
-      setCaptionGenProgress({ done: captionDoneCount, total: workItems.length });
+    } catch (e) {
+      if (e.name === 'AbortError') wasAborted = true;
+      else throw e;
     }
 
     setCaptionGenLoading(false);
-    if (hadError) addToast('Bəzi şəkillər üçün caption yazıla bilmədi', 'error');
+    captionGenAbortRef.current = null;
+    if (wasAborted) addToast(uiLang === 'ru' ? 'Остановлено' : 'Dayandırıldı', 'info');
+    else if (hadError) addToast('Bəzi şəkillər üçün caption yazıla bilmədi', 'error');
     else addToast(`${resultMap.size} caption hazırlandı! ✓`, 'success');
-  }, [photos, carousels, captionGuide, aiCaptions, venueName, aiProvider, aiSettings, addToast, includeRussian]);
+  }, [photos, carousels, captionGuide, aiCaptions, venueName, aiProvider, aiSettings, addToast, includeRussian, uiLang]);
+
+  const stopCaptionGen = useCallback(() => {
+    if (captionGenAbortRef.current) captionGenAbortRef.current.abort();
+  }, []);
 
   const copyAllAiCaptions = useCallback(async () => {
     const carouselNumberSet = new Set(carousels.flatMap((c) => c.numbers));
@@ -2047,6 +2132,28 @@ export default function App() {
     });
   }, []);
 
+  // Postu bir gündən başqa bir günə köçürür (məs. ayın 7-dən 16-na)
+  const handleMovePostToDay = useCallback((postId, fromDay, toDay) => {
+    if (fromDay === toDay) return;
+    setSchedule((prev) => {
+      if (!prev) return prev;
+      let movedPost = null;
+      const withoutPost = prev.map((day) => {
+        if (day.day !== fromDay) return day;
+        const idx = day.posts.findIndex((p) => p.id === postId);
+        if (idx === -1) return day;
+        const posts = [...day.posts];
+        movedPost = posts.splice(idx, 1)[0];
+        return { ...day, posts };
+      });
+      if (!movedPost) return prev;
+      return withoutPost.map((day) => {
+        if (day.day !== toDay) return day;
+        return { ...day, posts: [...day.posts, movedPost] };
+      });
+    });
+  }, []);
+
   /* ------------------------------- Tabs ------------------------------- */
 
   const tabs = [
@@ -2259,6 +2366,11 @@ export default function App() {
                     >
                       {aiCarouselLoading ? <><Loader2 size={14} className="animate-spin" /> {uiLang === 'ru' ? 'Поиск...' : 'Axtarılır...'}</> : <><Sparkles size={14} /> {uiLang === 'ru' ? 'AI предложение карусели' : 'AI karusel təklifi'}</>}
                     </button>
+                    {aiCarouselLoading && (
+                      <button onClick={stopAICarousel} className="bg-red-600 text-white rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 hover:bg-red-700">
+                        <XCircle size={14} /> {uiLang === 'ru' ? 'Стоп' : 'Dayandır'}
+                      </button>
+                    )}
                     <button
                       onClick={() => { setSelectMode((s) => { if (!s) setDeleteMode(false); return !s; }); setSelected(new Set()); }}
                       className={`rounded-lg px-3 py-1.5 text-sm flex items-center gap-1.5 border ${selectMode ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-stone-900 dark:border-stone-100' : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
@@ -2395,6 +2507,11 @@ export default function App() {
                         {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                         {aiLoading ? `${uiLang === 'ru' ? 'Анализ' : 'Təhlil edilir'} (${aiProgress.done}/${aiProgress.total})` : t('aiGuessBtn')}
                       </button>
+                      {aiLoading && (
+                        <button onClick={stopAI} className="bg-red-600 text-white rounded-lg px-3 py-2 text-sm flex items-center gap-1.5 hover:bg-red-700">
+                          <XCircle size={14} /> {uiLang === 'ru' ? 'Остановить' : 'Dayandır'}
+                        </button>
+                      )}
                     </div>
                   </div>
                   {categorizedCount > 0 && <p className="text-sm text-stone-500 mb-3 dark:text-stone-400">{categorizedCount}/{photos.length} {t('photoCategoriesProgress')}</p>}
@@ -2600,13 +2717,18 @@ export default function App() {
                     ? <><Loader2 size={14} className="animate-spin" /> {t('generatingBtn')} ({captionGenProgress.done}/{captionGenProgress.total})</>
                     : <><Sparkles size={14} /> {uiLang === 'ru' ? 'Написать подпись' : 'Caption yaz'}</>}
                 </button>
+                {captionGenLoading && (
+                  <button onClick={stopCaptionGen} className="bg-red-600 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-red-700">
+                    <XCircle size={14} /> {uiLang === 'ru' ? 'Остановить' : 'Dayandır'}
+                  </button>
+                )}
                 {aiCaptions.size > 0 && !captionGenLoading && (
                   <>
                     <button
                       onClick={addAllAiCaptionsToPaste}
                       className="bg-stone-900 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-stone-700"
                     >
-                      ↓ {t('addAllToPasteBtn')}
+                      <Check size={14} /> {uiLang === 'ru' ? 'Подтвердить подписи' : 'Captionları təsdiqlə'}
                     </button>
                     <button
                       onClick={copyAllAiCaptions}
@@ -2737,8 +2859,8 @@ export default function App() {
                     className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-24 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
                 </div>
                 <button onClick={generateSchedule} disabled={photos.length === 0}
-                  className="bg-stone-900 text-white rounded-lg px-4 py-2 text-sm flex items-center gap-2 hover:bg-stone-800 disabled:opacity-50">
-                  <Calendar size={14} /> {t('generatePlanBtn')}
+                  className="bg-orange-600 text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 hover:bg-orange-700 disabled:opacity-50 shadow-md shadow-orange-600/20 transition-all hover:shadow-lg hover:shadow-orange-600/30">
+                  <Calendar size={16} /> {t('generatePlanBtn')}
                 </button>
                 {schedule && (
                   <>
@@ -2786,6 +2908,7 @@ export default function App() {
                 copyStatus={copyStatus}
                 onReorderPost={handleReorderPost}
                 onEditCaption={handleEditCaption}
+                onMovePostToDay={handleMovePostToDay}
                 uiLang={uiLang}
               />
             )}
@@ -2794,13 +2917,32 @@ export default function App() {
 
         {/* Footer — Fabrika Media loqosu və müəllif */}
         <div className="mt-12 pt-6 border-t border-stone-200 dark:border-stone-800 flex flex-col items-center gap-2">
-          <img
-            src={darkMode ? fabrikaLightLogo : fabrikaDarkLogo}
-            alt="Fabrika Media"
-            className="h-6 opacity-70"
-          />
+          <a
+            href="https://www.instagram.com/fabrikamedia.az/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity"
+            title="Fabrika Media — Instagram"
+          >
+            <img
+              src={darkMode ? fabrikaIconLight : fabrikaIconDark}
+              alt="Fabrika Media"
+              className="h-5 w-auto"
+            />
+            <span className="menu-font text-lg font-semibold text-stone-700 dark:text-stone-200 tracking-tight">
+              fabrika
+            </span>
+          </a>
           <p className="text-[11px] text-stone-400 dark:text-stone-500">
-            {uiLang === 'ru' ? 'Создано' : 'Created by'} Rashad Huseyn
+            {uiLang === 'ru' ? 'Создано' : 'Created by'}{' '}
+            <a
+              href="https://www.instagram.com/rush.dp/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-stone-600 dark:hover:text-stone-300 underline-offset-2 hover:underline"
+            >
+              Rashad Huseyn
+            </a>
           </p>
         </div>
       </div>
