@@ -371,21 +371,51 @@ function shuffle(arr) {
 }
 
 function buildSequence(items) {
+  // Video və şəkilləri ayırırıq, sonra videoları şəkillərin arasına
+  // bərabər aralıqlarla "səpələyirik" ki, hamısı bir yerə yığılmasın.
+  const videos = items.filter((it) => it.isVideo);
+  const photosOnly = items.filter((it) => !it.isVideo);
+
+  // Şəkillər üçün əvvəlki kateqoriya-balanslaşdırılmış ardıcıllığı qur
   const groups = {};
-  items.forEach((it) => { (groups[it.category] = groups[it.category] || []).push(it); });
+  photosOnly.forEach((it) => { (groups[it.category] = groups[it.category] || []).push(it); });
   const cats = Object.keys(groups).map((cat) => ({ cat, queue: shuffle(groups[cat]) }));
-  const result = [];
+  const photoSeq = [];
   let last = null;
   while (cats.some((c) => c.queue.length > 0)) {
     let avail = cats.filter((c) => c.queue.length > 0 && c.cat !== last);
     if (avail.length === 0) avail = cats.filter((c) => c.queue.length > 0);
-    // Əvvəlcə massivi qarışdırıb sonra sabit meyarla sıralayırıq —
-    // comparator daxilində Math.random() istifadə etmək düzgün deyil.
     avail = shuffle(avail);
     avail.sort((a, b) => b.queue.length - a.queue.length);
     const chosen = avail[0];
-    result.push(chosen.queue.shift());
+    photoSeq.push(chosen.queue.shift());
     last = chosen.cat;
+  }
+
+  if (videos.length === 0) return photoSeq;
+
+  // Videoları şəkil ardıcıllığının arasına bərabər aralıqlarla yerləşdir.
+  // Məs. 25 şəkil + 5 video → hər ~5 şəkildən sonra 1 video.
+  const shuffledVideos = shuffle(videos);
+  const result = [];
+  const totalSlots = photoSeq.length + shuffledVideos.length;
+  const videoInterval = photoSeq.length > 0 ? totalSlots / shuffledVideos.length : 1;
+  let nextVideoSlot = videoInterval / 2; // birinci videoyu da əvvələ yığmamaq üçün yarımçıq sürüşdürürük
+  let videoIdx = 0;
+  let photoIdx = 0;
+
+  for (let slot = 0; slot < totalSlots; slot++) {
+    if (videoIdx < shuffledVideos.length && slot >= nextVideoSlot) {
+      result.push(shuffledVideos[videoIdx]);
+      videoIdx++;
+      nextVideoSlot += videoInterval;
+    } else if (photoIdx < photoSeq.length) {
+      result.push(photoSeq[photoIdx]);
+      photoIdx++;
+    } else if (videoIdx < shuffledVideos.length) {
+      result.push(shuffledVideos[videoIdx]);
+      videoIdx++;
+    }
   }
   return result;
 }
@@ -413,6 +443,7 @@ function buildPostItems(photos, carousels, captionsMap) {
       caption: captionsMap.get(cover.number) || '',
       coverNumber: cover.number,
       photos: members,
+      isVideo: members.some((m) => m.isVideo), // carousel-də 1 video varsa, video kimi say
     });
   });
 
@@ -425,6 +456,7 @@ function buildPostItems(photos, carousels, captionsMap) {
       caption: p.number != null ? (captionsMap.get(p.number) || '') : '',
       coverNumber: p.number,
       photos: [p],
+      isVideo: !!p.isVideo,
     });
   });
   return items;
@@ -505,7 +537,7 @@ async function exportPDF(schedule, monthIndex, year, published, venueName) {
   const rows = schedule.flatMap((day) =>
     day.posts.map((post) => {
       const done = published.has(post.id);
-      const tag = post.type === 'carousel' ? `Karusel (${post.photos.length})` : 'Şəkil';
+      const tag = post.type === 'carousel' ? `Karusel (${post.photos.length})` : post.type === 'special' ? '🎉 Xüsusi gün' : 'Şəkil';
       const imgThumb = post.photos.slice(0, 3).map((ph) =>
         `<img src="${ph.dataUrl}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;margin-right:3px;border:1px solid #e5e7eb;" />`
       ).join('');
@@ -917,6 +949,11 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
             <div key={day.day} className="py-4 first:pt-0">
               <div className="flex items-center mb-3">
                 <span className="menu-font text-2xl font-semibold text-stone-800 w-12 flex-shrink-0 dark:text-stone-200">{String(day.day).padStart(2, '0')}</span>
+                {day.specialLabel && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400 font-medium mr-2 flex-shrink-0">
+                    🎉 {day.specialLabel}
+                  </span>
+                )}
                 <span className="dotted-leader" />
                 <span className="text-xs text-stone-400 dark:text-stone-500">
                   {filter === 'all'
@@ -925,7 +962,11 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                 </span>
               </div>
               {visiblePosts.length === 0 ? (
-                <p className="text-sm text-stone-400 ml-12 dark:text-stone-500">{uiLang === 'ru' ? '— нет публикаций —' : '— paylaşım yoxdur —'}</p>
+                <p className="text-sm text-stone-400 ml-12 dark:text-stone-500">
+                  {day.specialLabel
+                    ? (uiLang === 'ru' ? '— текст пока не написан —' : '— hələ caption yazılmayıb —')
+                    : (uiLang === 'ru' ? '— нет публикаций —' : '— paylaşım yoxdur —')}
+                </p>
               ) : (
                 <div className="space-y-3 ml-0 sm:ml-12">
                   {day.posts.map((post, postIdx) => {
@@ -970,12 +1011,23 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                               <Layers size={9} /> {post.photos.length}
                             </div>
                           </div>
+                        ) : post.type === 'special' ? (
+                          <div className="w-16 h-16 rounded-lg bg-orange-100 dark:bg-orange-950/40 flex items-center justify-center flex-shrink-0 text-2xl flex-shrink-0">
+                            🎉
+                          </div>
                         ) : (
-                          <img src={post.photos[0].dataUrl} alt={post.photos[0].filename} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                          <div className="relative flex-shrink-0">
+                            <img src={post.photos[0].dataUrl} alt={post.photos[0].filename} className="w-16 h-16 rounded-lg object-cover" />
+                            {post.photos[0].isVideo && (
+                              <div className="absolute bottom-0 right-0 bg-red-600 text-white text-[9px] rounded-full px-1.5 py-0.5 z-20 leading-none">
+                                🎬
+                              </div>
+                            )}
+                          </div>
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${color.bg} ${color.text}`}>{post.category}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${post.type === 'special' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400' : `${color.bg} ${color.text}`}`}>{post.category}</span>
                             {post.type === 'carousel' && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-200 text-stone-600 flex items-center gap-0.5 dark:bg-stone-700 dark:text-stone-300">
                                 <Layers size={9} /> {uiLang === 'ru' ? 'Карусель' : 'Karusel'}
@@ -1089,6 +1141,10 @@ export default function App() {
   const [captionsRaw, setCaptionsRaw] = useState('');
   const [monthIndex, setMonthIndex] = useState(5);
   const [year, setYear] = useState(2026);
+  // Xüsusi günlər (Party, tədbir və s.) — plan generasiyası bu günlərə
+  // toxunmur, sənin yazdığın caption olduğu kimi qalır, şəkil tələb olunmur.
+  // Format: { [day]: { label: 'Party', caption: '...' } }
+  const [specialDays, setSpecialDays] = useState({});
   // Rus dili tərcüməsi — aktiv olanda hər caption AZ + RU formatında yazılır
   const [includeRussian, setIncludeRussian] = useState(false);
   // İnterfeys dili (AZ/RU) — bu, caption dilindən tamamilə ayrı bir sistemdir
@@ -1389,6 +1445,17 @@ export default function App() {
 
   const setPhotoPersonName = useCallback((id, name) => {
     setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, personName: name } : p)));
+  }, []);
+
+  // Video thumbnail işarəsi — plan generasiyası şəkil/video nisbətini
+  // nəzərə alaraq məntiqli ardıcıllıq qurmaq üçün bunu istifadə edir
+  const togglePhotoIsVideo = useCallback((ids) => {
+    setPhotos((prev) => {
+      const idSet = new Set(Array.isArray(ids) ? ids : [ids]);
+      // Qrupun cari vəziyyətini yoxla (əgər hamısı video isə, sıfırla; əks halda hamısını video et)
+      const allVideo = prev.filter((p) => idSet.has(p.id)).every((p) => p.isVideo);
+      return prev.map((p) => (idSet.has(p.id) ? { ...p, isVideo: !allVideo } : p));
+    });
   }, []);
 
   const togglePhotoSelect = useCallback((number) => {
@@ -1734,8 +1801,8 @@ export default function App() {
         const langGuard = `\n\nDİQQƏT: Mətn YALNIZ Azərbaycan dilində olmalıdır (Türkiyə türkcəsi YOX). Türk dilinə xas sözlər (məs. "çok", "güzel", "harika", "şimdi", "değil") işlətmə — onların Azərbaycanca qarşılığını yaz (məs. "çox", "gözəl", "əla", "indi", "deyil").`;
 
         const userText = isCarousel
-          ? `Bu ${item.members.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz. Məkan: "${venueRef}". Bütün şəkillər birlikdə paylaşılacaq. 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`
-          : `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`;
+          ? `Bu ${item.members.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz. Məkan: "${venueRef}". Bütün şəkillər birlikdə paylaşılacaq. Maksimum 2 cümlə olsun (1 cümlə də kifayətdir, uzatmaq lazım deyil). Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`
+          : `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". Maksimum 2 cümlə olsun (1 cümlə də kifayətdir, uzatmaq lazım deyil). Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`;
 
         const text = await callAIWithFallback({
           primaryProvider: aiProvider,
@@ -1862,7 +1929,7 @@ export default function App() {
         primaryProvider: aiProvider,
         aiSettings,
         onFallback: (from, to) => addToast(`⚡ ${from} limiti → ${to}-ə keçildi`, 'info'),
-        userText: `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". 2-3 cümlə olsun. Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}${varietySection}${langGuard}${russianSection}`,
+        userText: `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". Maksimum 2 cümlə olsun (1 cümlə də kifayətdir, uzatmaq lazım deyil). Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}${varietySection}${langGuard}${russianSection}`,
         imageBase64: photo.dataUrl.split(',')[1],
         maxTokens: includeRussian ? 450 : 250,
       });
@@ -2012,19 +2079,63 @@ export default function App() {
     }
   }, [addToast]);
 
+  // Xüsusi gün (Party/tədbir) idarəetməsi — bu günlər plan generasiyasında
+  // toxunulmaz qalır, AI/random sıralama bunları nəzərə almır.
+  const setSpecialDay = useCallback((day, label, caption) => {
+    setSpecialDays((prev) => ({ ...prev, [day]: { label, caption } }));
+    setSchedule(null);
+  }, []);
+
+  const removeSpecialDay = useCallback((day) => {
+    setSpecialDays((prev) => {
+      const next = { ...prev };
+      delete next[day];
+      return next;
+    });
+    setSchedule(null);
+  }, []);
+
   const generateSchedule = useCallback(async () => {
     if (photos.length === 0) return;
     const items = buildPostItems(photos, carousels, captionsMap);
     const seq = buildSequence(items);
     const days = new Date(year, monthIndex + 1, 0).getDate();
-    const counts = distributeDays(seq.length, days);
+
+    // Xüsusi günlər (Party və s.) — bu günlər rezerv olunur, AI/random
+    // ardıcıllıq onlara toxunmur. Qalan şəkil/video yalnız "boş" günlərə paylanır.
+    const specialDayNums = Object.keys(specialDays).map(Number).filter((d) => d >= 1 && d <= days);
+    const specialDaySet = new Set(specialDayNums);
+    const regularDaysCount = days - specialDaySet.size;
+
+    const counts = regularDaysCount > 0 ? distributeDays(seq.length, regularDaysCount) : [];
     const result = [];
     let idx = 0;
-    for (let d = 0; d < days; d++) {
-      const c = counts[d];
-      result.push({ day: d + 1, posts: seq.slice(idx, idx + c) });
-      idx += c;
+    let regularDayCursor = 0;
+
+    for (let d = 1; d <= days; d++) {
+      if (specialDaySet.has(d)) {
+        // Xüsusi gün — şəkil yoxdur, sadəcə yazılmış caption (varsa)
+        const sd = specialDays[d];
+        result.push({
+          day: d,
+          posts: sd.caption ? [{
+            id: `special:${d}`,
+            type: 'special',
+            category: sd.label || 'Xüsusi gün',
+            caption: sd.caption,
+            coverNumber: null,
+            photos: [],
+          }] : [],
+          specialLabel: sd.label || (uiLang === 'ru' ? 'Особый день' : 'Xüsusi gün'),
+        });
+      } else {
+        const c = counts[regularDayCursor] || 0;
+        result.push({ day: d, posts: seq.slice(idx, idx + c) });
+        idx += c;
+        regularDayCursor++;
+      }
     }
+
     setSchedule(result);
     scheduleSignatureRef.current = computeDataSignature(photos, carousels, captionsMap);
 
@@ -2036,7 +2147,7 @@ export default function App() {
       setPublished(new Set());
     }
     addToast('Plan yaradıldı', 'success');
-  }, [photos, carousels, captionsMap, year, monthIndex, addToast, profilePrefix]);
+  }, [photos, carousels, captionsMap, year, monthIndex, addToast, profilePrefix, specialDays, uiLang]);
 
   const togglePublished = useCallback((postId) => {
     setPublished((prev) => {
@@ -2064,8 +2175,10 @@ export default function App() {
       day.posts.forEach((post) => {
         const mark = published.has(post.id) ? '[✓ paylaşıldı] ' : '';
         const files = post.photos.map((ph) => ph.filename).join(', ');
-        const tag = post.type === 'carousel' ? `Karusel (${post.photos.length} şəkil)` : 'Şəkil';
-        lines.push(`  • ${mark}[${post.category}] ${tag}: ${files}`);
+        const tag = post.type === 'carousel' ? `Karusel (${post.photos.length} şəkil)` : post.type === 'special' ? '🎉 Xüsusi gün' : 'Şəkil';
+        lines.push(post.type === 'special'
+          ? `  • [${post.category}] ${tag}`
+          : `  • ${mark}[${post.category}] ${tag}: ${files}`);
         lines.push(post.caption ? `    "${post.caption}"` : `    (caption tapılmadı — şəkil №${post.coverNumber})`);
       });
       lines.push('');
@@ -2609,7 +2722,14 @@ export default function App() {
                                 </div>
                               </div>
                             ) : (
-                              <img src={p.dataUrl} alt={p.filename} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                              <div className="relative flex-shrink-0">
+                                <img src={p.dataUrl} alt={p.filename} className="w-12 h-12 rounded-lg object-cover" />
+                                {p.isVideo && (
+                                  <div className="absolute bottom-0 right-0 bg-red-600 text-white text-[8px] rounded-full px-1 py-0.5 z-20 leading-none">
+                                    🎬
+                                  </div>
+                                )}
+                              </div>
                             )}
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-stone-500 truncate dark:text-stone-400">
@@ -2669,6 +2789,15 @@ export default function App() {
                                 placeholder={t('personNamePlaceholder')}
                                 className="w-full mt-1 text-xs border border-stone-100 rounded-md px-1.5 py-1 bg-white text-stone-600 placeholder-stone-400 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-700 dark:placeholder-stone-500"
                               />
+                              <label className="flex items-center gap-1.5 mt-1.5 text-[11px] text-stone-500 dark:text-stone-400 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={item.type === 'carousel' ? item.members.every((m) => m.isVideo) : !!p.isVideo}
+                                  onChange={() => togglePhotoIsVideo(item.members.map((m) => m.id))}
+                                  className="rounded border-stone-300 dark:border-stone-600 text-red-600 focus:ring-red-400"
+                                />
+                                🎬 {uiLang === 'ru' ? 'Это видео (превью)' : 'Bu videodur (thumbnail)'}
+                              </label>
                             </div>
                           </div>
                         );
@@ -2843,6 +2972,67 @@ export default function App() {
                 </div>
               </div>
             )}
+
+            <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
+              <h3 className="menu-font text-lg font-semibold mb-1">
+                {uiLang === 'ru' ? '🎉 Особые дни' : '🎉 Xüsusi günlər'}
+              </h3>
+              <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">
+                {uiLang === 'ru'
+                  ? 'Отметь дни с особым событием (Party, мероприятие). Эти дни не получат случайное фото — только текст, который ты укажешь.'
+                  : 'Party və ya xüsusi tədbir olan günləri işarələ. Bu günlərə təsadüfi şəkil düşməyəcək — yalnız yazdığın mətn (caption) görünəcək.'}
+              </p>
+              {(() => {
+                const daysInSelectedMonth = new Date(year, monthIndex + 1, 0).getDate();
+                const dayNums = Array.from({ length: daysInSelectedMonth }, (_, i) => i + 1);
+                return (
+                  <div className="grid grid-cols-7 gap-1.5 mb-3">
+                    {dayNums.map((d) => {
+                      const isSpecial = !!specialDays[d];
+                      return (
+                        <button
+                          key={d}
+                          onClick={() => {
+                            if (isSpecial) removeSpecialDay(d);
+                            else setSpecialDay(d, uiLang === 'ru' ? 'Party' : 'Party', '');
+                          }}
+                          className={`text-xs rounded-lg py-1.5 border transition-colors ${isSpecial ? 'bg-orange-100 border-orange-400 text-orange-700 dark:bg-orange-950/40 dark:border-orange-600 dark:text-orange-400' : 'bg-white border-stone-200 text-stone-500 hover:border-stone-300 dark:bg-stone-900 dark:border-stone-700 dark:text-stone-400'}`}
+                        >
+                          {d}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+              {Object.keys(specialDays).length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-stone-100 dark:border-stone-700">
+                  {Object.entries(specialDays)
+                    .map(([d, v]) => [parseInt(d, 10), v])
+                    .sort((a, b) => a[0] - b[0])
+                    .map(([d, v]) => (
+                      <div key={d} className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-mono text-stone-400 dark:text-stone-500 w-6 flex-shrink-0">{d}.</span>
+                        <input
+                          value={v.label}
+                          onChange={(e) => setSpecialDay(d, e.target.value, v.caption)}
+                          placeholder={uiLang === 'ru' ? 'Название (напр. Party)' : 'Ad (məs. Party)'}
+                          className="text-xs border border-stone-200 dark:border-stone-700 rounded-md px-2 py-1 w-32 dark:bg-stone-900 dark:text-stone-200"
+                        />
+                        <input
+                          value={v.caption}
+                          onChange={(e) => setSpecialDay(d, v.label, e.target.value)}
+                          placeholder={uiLang === 'ru' ? 'Подпись (напр. DJ Vugarixx)' : 'Caption (məs. DJ Vugarixx bu axşam)'}
+                          className="text-xs border border-stone-200 dark:border-stone-700 rounded-md px-2 py-1 flex-1 min-w-[160px] dark:bg-stone-900 dark:text-stone-200"
+                        />
+                        <button onClick={() => removeSpecialDay(d)} className="text-stone-300 hover:text-red-400 flex-shrink-0">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
 
             <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
               <div className="flex flex-wrap items-end gap-3">
