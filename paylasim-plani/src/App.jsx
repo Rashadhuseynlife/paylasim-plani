@@ -1760,15 +1760,31 @@ export default function App() {
 
     // Bu çağırış daxilində artıq yazılmış caption-ların başlanğıc hissələrini
     // (ilk 6-8 söz) izləyirik — AI-a "bunları təkrarlama" deyə göstəririk ki,
-    // "Vista-da..." kimi eyni qəlibdən çoxlu caption yaranmasın.
+    // eyni qəlibdən çoxlu caption yaranmasın. Mövcud (əvvəlki "hamısını
+    // yenidən yaz" basışından qalan) caption-ların açılışlarını da əlavə
+    // edirik ki, düymə bir neçə dəfə basılanda eyni qəliblər təkrarlanmasın.
     const usedOpenings = [];
+    aiCaptions.forEach((existingCaption) => {
+      const azPart = existingCaption.split('\n\n')[0];
+      const opening = azPart.trim().split(/\s+/).slice(0, 7).join(' ');
+      if (opening) usedOpenings.push(opening);
+    });
+
+    const BANNED_PATTERNS = [
+      '"Hər [söz] bir hekayədir" və ya bənzər ümumiləşdirici cümlə ilə BAŞLAMA',
+      '"[Məkan adı]-da/də" ilə BAŞLAMA',
+      'Eyni metaforanı (hekayə, yolculuq, dünya) iki captionda təkrar İŞLƏTMƏ',
+    ];
+
     const CTA_STYLES = [
-      'sual ver (məs. "Bunu sınamısınız?")',
-      'birbaşa dəvət et (məs. "Gəlin görüşək")',
-      'duyğu/atmosfer təsviri ilə başla (heç bir CTA sözü olmadan)',
-      'qısa bir fakt və ya iddia ilə başla',
-      'emoji ilə açılan qısa bir ifadə ilə başla',
-      'müştərinin təcrübəsini təsvir edərək başla ("Hər dəfə... ")',
+      'birbaşa sual ver (məs. "Bunu hələ sınamısan?")',
+      'qısa bir əmr/dəvətlə başla (məs. "Gəl, bu axşam bura")',
+      'konkret bir an/səhnə təsviri ilə başla (kameranın gördüyü kimi, mücərrəd deyil)',
+      'rəqəm və ya konkret fakt ilə başla (məs. "3 saat bişən...")',
+      'tək bir emoji + qısa fraza ilə başla (cümlə qurmadan)',
+      'müştərinin reaksiyasını sitat kimi ver (məs. "İlk dəfə görəndə hamı dayanır")',
+      'kontrast/müqayisə ilə başla (məs. "Adi deyil, fərqlidir")',
+      'birbaşa məhsulun/anın adını çəkməklə başla, giriş cümləsi olmadan',
     ];
 
     const fetchCaption = async (item, idx) => {
@@ -1792,13 +1808,14 @@ export default function App() {
           : '';
 
         // Təkrarçılığı önləmək üçün: əvvəlki başlanğıclar siyahısı + bu caption
-        // üçün təyin olunmuş üslub göstərişi.
+        // üçün təyin olunmuş üslub göstərişi + qadağan edilmiş ümumi qəliblər.
         const ctaStyle = CTA_STYLES[idx % CTA_STYLES.length];
+        const bannedList = BANNED_PATTERNS.map((b) => `- ${b}`).join('\n');
         const varietySection = usedOpenings.length > 0
-          ? `\n\nÇOX VACİB: Bu caption "${venueRef}" sözü ilə BAŞLAMASIN (artıq ${usedOpenings.length} caption "${venueRef}-da/də" ilə başlayıb, təkrar olmasın). Bu captionun açılış cümləsi: ${ctaStyle}. Əvvəlki captionların başlanğıcları: ${usedOpenings.map((o) => `"${o}..."`).join(', ')} — bunlardan fərqli bir cümlə qurusu istifadə et.`
-          : `\n\nBu captionun açılış cümləsi: ${ctaStyle}.`;
+          ? `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.\nƏvvəlki captionların açılışları (bunlardan FƏRQLİ ol): ${usedOpenings.slice(-8).map((o) => `"${o}..."`).join(', ')}.\nBu captionun açılış üslubu: ${ctaStyle}.`
+          : `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.\nBu captionun açılış üslubu: ${ctaStyle}.`;
 
-        const langGuard = `\n\nDİQQƏT: Mətn YALNIZ Azərbaycan dilində olmalıdır (Türkiyə türkcəsi YOX). Türk dilinə xas sözlər (məs. "çok", "güzel", "harika", "şimdi", "değil") işlətmə — onların Azərbaycanca qarşılığını yaz (məs. "çox", "gözəl", "əla", "indi", "deyil").`;
+        const langGuard = `\n\nÇOX MÜHÜM — DİL QAYDASI: Mətn YALNIZ Azərbaycan dilində olmalıdır, Türkiyə türkcəsi QƏTİYYƏN işlənməməlidir. Türk dilinə aid söz və ifadələri belə əvəzlə:\n"müzik" yox, "musiqi" yaz. "tikə" yox (Azərbaycan dilində "bir tikə təravət" kimi söz birləşməsi yoxdur). "çok" yox, "çox" yaz. "güzel" yox, "gözəl" yaz. "harika" yox, "əla"/"möhtəşəm" yaz. "şimdi" yox, "indi" yaz. "değil" yox, "deyil" yaz. "yapıyor" yox, "edir"/"hazırlayır" yaz. Əgər bir sözün Azərbaycan dilində adi qarşılığından əmin deyilsənsə, daha sadə və tanış bir söz seç, riskli/türk mənşəli söz işlətmə.`;
 
         const userText = isCarousel
           ? `Bu ${item.members.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz. Məkan: "${venueRef}". Bütün şəkillər birlikdə paylaşılacaq. Maksimum 2 cümlə olsun (1 cümlə də kifayətdir, uzatmaq lazım deyil). Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`
@@ -1919,17 +1936,36 @@ export default function App() {
     const guideSection = captionGuide.trim()
       ? `\n\nNümunə üslub (bu cür yaz, amma cümlələri hərfi-hərfinə təkrarlama):\n${captionGuide.trim()}`
       : '';
-    const langGuard = `\n\nDİQQƏT: Mətn YALNIZ Azərbaycan dilində olmalıdır (Türkiyə türkcəsi YOX). Türk dilinə xas sözlər (məs. "çok", "güzel", "harika", "şimdi", "değil") işlətmə — onların Azərbaycanca qarşılığını yaz (məs. "çox", "gözəl", "əla", "indi", "deyil").`;
+
+    // Məhsul adı / Şəxs adı — itirilirdi, indi daxil edirik
+    let extraInfo = '';
+    if (photo.productName?.trim()) {
+      extraInfo += `\nMəhsulun adı: ${photo.productName.trim()}. Bu adı captionda təbii şəkildə istifadə et.`;
+    }
+    if (photo.personName?.trim()) {
+      extraInfo += `\nŞəkildəki şəxs: ${photo.personName.trim()}. Bu adı captionda təbii şəkildə istifadə et.`;
+    }
+
+    const langGuard = `\n\nÇOX MÜHÜM — DİL QAYDASI: Mətn YALNIZ Azərbaycan dilində olmalıdır, Türkiyə türkcəsi QƏTİYYƏN işlənməməlidir. Türk dilinə aid söz və ifadələri belə əvəzlə:\n"müzik" yox, "musiqi" yaz. "tikə" yox (Azərbaycan dilində "bir tikə təravət" kimi söz birləşməsi yoxdur). "çok" yox, "çox" yaz. "güzel" yox, "gözəl" yaz. "harika" yox, "əla"/"möhtəşəm" yaz. "şimdi" yox, "indi" yaz. "değil" yox, "deyil" yaz. "yapıyor" yox, "edir"/"hazırlayır" yaz. Əgər bir sözün Azərbaycan dilində adi qarşılığından əmin deyilsənsə, daha sadə və tanış bir söz seç, riskli/türk mənşəli söz işlətmə.`;
+
     const russianSection = includeRussian
       ? `\n\nMÜHÜM: Captionu əvvəlcə Azərbaycan dilində yaz. Sonra İKİ boş sətirdən sonra, ayrıca bir sətirdə YALNIZ 🇷🇺 emojisini yaz, sonra YENİ sətirdə həmin mətnin rus dilinə tərcüməsini yaz. Format dəqiq belə olsun (sətr sonlarına diqqət et):\n[Azərbaycan dilində caption]\n\n🇷🇺\n[Rus dilində tərcümə]\nBaşqa heç bir başlıq, izahat və ya əlavə mətn yazma — yalnız bu üç hissəni (AZ mətn, 🇷🇺, RU mətn) yaz.`
       : '';
-    const varietySection = `\n\nBu captionun açılış cümləsi "${venueRef}" sözü ilə BAŞLAMASIN — fərqli, orijinal bir açılış tap (sual, duyğu təsviri, qısa fakt, və ya emoji ilə açılan ifadə ola bilər).`;
+
+    // Əvvəlki caption-u götürüb, onun açılış cümləsini təkrarlamamağı tələb edirik —
+    // "yenidən yaz" düyməsi dəfələrlə basılanda eyni cümlə ilə başlamasın deyə.
+    const previousCaption = aiCaptions.get(photoNum) || '';
+    const previousOpening = previousCaption.split('\n')[0].trim().split(/\s+/).slice(0, 8).join(' ');
+    const varietySection = previousOpening
+      ? `\n\nÇOX VACİB: Bu captionun açılış cümləsi "${venueRef}" sözü ilə BAŞLAMASIN, və əvvəlki cəhddən tamamilə fərqli olsun. Əvvəlki cəhdin açılışı bu idi: "${previousOpening}..." — bunu TƏKRARLAMA, tamamilə başqa bir cümlə qurusu, başqa bir fikir ilə başla (sual, fakt, emoji, müştəri təcrübəsi və s.).`
+      : `\n\nBu captionun açılış cümləsi "${venueRef}" sözü ilə BAŞLAMASIN — fərqli, orijinal bir açılış tap (sual, duyğu təsviri, qısa fakt, və ya emoji ilə açılan ifadə ola bilər).`;
+
     try {
       const caption = await callAIWithFallback({
         primaryProvider: aiProvider,
         aiSettings,
         onFallback: (from, to) => addToast(`⚡ ${from} limiti → ${to}-ə keçildi`, 'info'),
-        userText: `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". Maksimum 2 cümlə olsun (1 cümlə də kifayətdir, uzatmaq lazım deyil). Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${guideSection}${varietySection}${langGuard}${russianSection}`,
+        userText: `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". Maksimum 2 cümlə olsun (1 cümlə də kifayətdir, uzatmaq lazım deyil). Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`,
         imageBase64: photo.dataUrl.split(',')[1],
         maxTokens: includeRussian ? 450 : 250,
       });
@@ -1943,7 +1979,7 @@ export default function App() {
       addToast(`#${photoNum} yazıla bilmədi: ${err instanceof Error ? err.message : 'xəta'}`, 'error');
     }
     setRegenLoadingNums((prev) => { const n = new Set(prev); n.delete(photoNum); return n; });
-  }, [venueName, captionGuide, aiProvider, aiSettings, addToast, includeRussian]);
+  }, [venueName, captionGuide, aiProvider, aiSettings, addToast, includeRussian, aiCaptions]);
 
   // Load saved plan keys, venue presets and AI config — profil dəyişəndə yenidən yüklənir
   useEffect(() => {
