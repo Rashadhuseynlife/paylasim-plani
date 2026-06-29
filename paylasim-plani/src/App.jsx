@@ -812,7 +812,7 @@ function PhotoGrid({ photos, categories, carousels, selectMode, deleteMode, sele
 }
 
 /* --- CarouselManager --- */
-function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSuggestion, onDismissSuggestion, onRemoveCarousel, uiLang = 'az' }) {
+function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSuggestion, onDismissSuggestion, onRemoveCarousel, onReorderCarouselPhoto, onReorderSuggestion, uiLang = 'az' }) {
   return (
     <>
       {suggestedCarousels.length > 0 && (
@@ -820,14 +820,31 @@ function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSugge
           <h3 className="menu-font text-lg font-semibold mb-3 flex items-center gap-2">
             <Sparkles size={16} className="text-orange-600" /> {uiLang === 'ru' ? 'AI предлагает карусели' : 'AI təklif etdiyi karusellər'}
           </h3>
-          <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">{uiLang === 'ru' ? 'Эти фото очень похожи — можешь объединить их в один пост.' : 'Bu şəkillər çox oxşardır — istəsən birlikdə tək bir post kimi planlaşdır.'}</p>
+          <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">{uiLang === 'ru' ? 'Эти фото очень похожи — можешь объединить их в один пост. Стрелками можно поменять порядок (первое фото = обложка).' : 'Bu şəkillər çox oxşardır — istəsən birlikdə tək bir post kimi planlaşdır. Oxlarla sıranı dəyişə bilərsən (birinci şəkil = əsas/cover).'}</p>
           <div className="space-y-2">
-            {suggestedCarousels.map((nums) => (
-              <div key={nums.join(',')} className="flex items-center gap-2 flex-wrap border border-stone-100 rounded-xl p-2">
-                <div className="flex -space-x-2">
-                  {nums.map((n) => {
+            {suggestedCarousels.map((nums, sIdx) => (
+              <div key={nums.join(',')} className="flex items-center gap-2 flex-wrap border border-stone-100 dark:border-stone-700 rounded-xl p-2">
+                <div className="flex gap-1.5">
+                  {nums.map((n, photoIdx) => {
                     const ph = photos.find((x) => x.number === n);
-                    return ph ? <img key={n} src={ph.dataUrl} className="w-10 h-10 rounded-lg object-cover border-2 border-white" alt={ph.filename} /> : null;
+                    if (!ph) return null;
+                    return (
+                      <div key={n} className="flex flex-col items-center gap-0.5">
+                        <img src={ph.dataUrl} className="w-10 h-10 rounded-lg object-cover border-2 border-white dark:border-stone-800" alt={ph.filename} />
+                        <div className="flex gap-0.5">
+                          <button
+                            onClick={() => onReorderSuggestion(sIdx, photoIdx, photoIdx - 1)}
+                            disabled={photoIdx === 0}
+                            className="text-[9px] text-stone-300 hover:text-stone-600 disabled:opacity-20 leading-none px-0.5"
+                          >◀</button>
+                          <button
+                            onClick={() => onReorderSuggestion(sIdx, photoIdx, photoIdx + 1)}
+                            disabled={photoIdx === nums.length - 1}
+                            className="text-[9px] text-stone-300 hover:text-stone-600 disabled:opacity-20 leading-none px-0.5"
+                          >▶</button>
+                        </div>
+                      </div>
+                    );
                   })}
                 </div>
                 <span className="text-sm text-stone-500 dark:text-stone-400">{uiLang === 'ru' ? 'Фото' : 'Şəkillər'}: {nums.join(', ')}</span>
@@ -844,13 +861,31 @@ function CarouselManager({ photos, carousels, suggestedCarousels, onConfirmSugge
       {carousels.length > 0 && (
         <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
           <h3 className="menu-font text-lg font-semibold mb-3 flex items-center gap-2"><Layers size={16} /> {uiLang === 'ru' ? 'Карусели' : 'Karusellər'}</h3>
+          <p className="text-stone-500 text-sm mb-3 dark:text-stone-400">{uiLang === 'ru' ? 'Стрелками можно поменять порядок (первое фото = обложка и используется для подписи).' : 'Oxlarla şəkillərin sırasını dəyişə bilərsən (birinci şəkil = əsas/cover, caption üçün istifadə olunur).'}</p>
           <div className="space-y-2">
             {carousels.map((c, ci) => (
               <div key={c.id} className={`flex items-center gap-2 flex-wrap rounded-xl p-2 ring-2 ${GROUP_RINGS[ci % GROUP_RINGS.length]}`}>
-                <div className="flex -space-x-2">
-                  {c.numbers.map((n) => {
+                <div className="flex gap-1.5">
+                  {c.numbers.map((n, photoIdx) => {
                     const ph = photos.find((x) => x.number === n);
-                    return ph ? <img key={n} src={ph.dataUrl} className="w-10 h-10 rounded-lg object-cover border-2 border-white" alt={ph.filename} /> : null;
+                    if (!ph) return null;
+                    return (
+                      <div key={n} className="flex flex-col items-center gap-0.5">
+                        <img src={ph.dataUrl} className="w-10 h-10 rounded-lg object-cover border-2 border-white dark:border-stone-800" alt={ph.filename} />
+                        <div className="flex gap-0.5">
+                          <button
+                            onClick={() => onReorderCarouselPhoto(c.id, photoIdx, photoIdx - 1)}
+                            disabled={photoIdx === 0}
+                            className="text-[9px] text-stone-300 hover:text-stone-600 disabled:opacity-20 leading-none px-0.5"
+                          >◀</button>
+                          <button
+                            onClick={() => onReorderCarouselPhoto(c.id, photoIdx, photoIdx + 1)}
+                            disabled={photoIdx === c.numbers.length - 1}
+                            className="text-[9px] text-stone-300 hover:text-stone-600 disabled:opacity-20 leading-none px-0.5"
+                          >▶</button>
+                        </div>
+                      </div>
+                    );
                   })}
                 </div>
                 <span className="text-sm text-stone-500 dark:text-stone-400">{uiLang === 'ru' ? 'Фото' : 'Şəkillər'}: {c.numbers.join(', ')} · {uiLang === 'ru' ? 'как 1 пост в плане' : 'planda 1 post kimi'}</span>
@@ -1141,6 +1176,10 @@ export default function App() {
   const [captionsRaw, setCaptionsRaw] = useState('');
   const [monthIndex, setMonthIndex] = useState(5);
   const [year, setYear] = useState(2026);
+  // Plan tarix aralığı — defolt olaraq ayın bütün günləri, amma istəyə
+  // bağlı fərqli aralıq seçilə bilər (məs. 26-dan növbəti ayın 10-na qədər)
+  const [planStartDay, setPlanStartDay] = useState(1);
+  const [planEndDay, setPlanEndDay] = useState(null); // null = ayın son günü
   // Xüsusi günlər (Party, tədbir və s.) — plan generasiyası bu günlərə
   // toxunmur, sənin yazdığın caption olduğu kimi qalır, şəkil tələb olunmur.
   // Format: { [day]: { label: 'Party', caption: '...' } }
@@ -1206,6 +1245,8 @@ export default function App() {
   const captionGenAbortRef = useRef(null);
   const [captionGenProgress, setCaptionGenProgress] = useState({ done: 0, total: 0 });
   const [copiedGenCaption, setCopiedGenCaption] = useState(null);
+  const [editingGenCaption, setEditingGenCaption] = useState(null);
+  const [editGenCaptionValue, setEditGenCaptionValue] = useState('');
   const [regenLoadingNums, setRegenLoadingNums] = useState(new Set());
 
   // switchProfile/addProfile/removeProfile bura (bütün lazımi state-lərdən
@@ -1500,6 +1541,33 @@ export default function App() {
 
   const dismissSuggestion = useCallback((numbers) => {
     setSuggestedCarousels((prev) => prev.filter((s) => s.join(',') !== numbers.join(',')));
+  }, []);
+
+  // Carousel daxilində şəkillərin sırasını dəyişir (yuxarı/aşağı ox ilə) —
+  // bu, hansı şəklin "cover" (caption və plan üçün əsas) olacağını təyin edir.
+  const reorderCarouselPhoto = useCallback((carouselId, fromIdx, toIdx) => {
+    if (toIdx < 0) return;
+    pushUndoSnapshot(photos, carousels);
+    setCarousels((prev) => prev.map((c) => {
+      if (c.id !== carouselId || toIdx >= c.numbers.length) return c;
+      const nums = [...c.numbers];
+      const [moved] = nums.splice(fromIdx, 1);
+      nums.splice(toIdx, 0, moved);
+      return { ...c, numbers: nums };
+    }));
+    setSchedule(null);
+  }, [photos, carousels, pushUndoSnapshot]);
+
+  // AI-ın təklif etdiyi (hələ təsdiqlənməmiş) carousel-in şəkil sırasını dəyişir
+  const reorderSuggestedCarousel = useCallback((suggestionIdx, fromIdx, toIdx) => {
+    if (toIdx < 0) return;
+    setSuggestedCarousels((prev) => prev.map((nums, i) => {
+      if (i !== suggestionIdx || toIdx >= nums.length) return nums;
+      const next = [...nums];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    }));
   }, []);
 
   /* -------------------- AI (pulsuz — proxy yox) -------------------- */
@@ -1927,9 +1995,10 @@ export default function App() {
     addToast('Bütün captionlar paste bölməsinə əlavə edildi', 'success');
   }, [photos, carousels, aiCaptions, addToast]);
 
-  const regenOneCaption = useCallback(async (photo) => {
+  const regenOneCaption = useCallback(async (photo, carouselMembers = null) => {
     if (photo.number == null) return;
     const photoNum = photo.number;
+    const isCarousel = !!carouselMembers && carouselMembers.length > 1;
     const cfg = aiSettings[aiProvider] || {};
     setRegenLoadingNums((prev) => new Set([...prev, photoNum]));
     const venueRef = venueName.trim() || 'bizim kafemiz';
@@ -1937,13 +2006,16 @@ export default function App() {
       ? `\n\nNümunə üslub (bu cür yaz, amma cümlələri hərfi-hərfinə təkrarlama):\n${captionGuide.trim()}`
       : '';
 
-    // Məhsul adı / Şəxs adı — itirilirdi, indi daxil edirik
+    // Məhsul adı / Şəxs adı — carousel-də bütün üzvlərdən, tək şəkildə özündən
+    const sourceForNames = carouselMembers || [photo];
+    const productNames = [...new Set(sourceForNames.map((m) => m.productName?.trim()).filter(Boolean))];
+    const personNames = [...new Set(sourceForNames.map((m) => m.personName?.trim()).filter(Boolean))];
     let extraInfo = '';
-    if (photo.productName?.trim()) {
-      extraInfo += `\nMəhsulun adı: ${photo.productName.trim()}. Bu adı captionda təbii şəkildə istifadə et.`;
+    if (productNames.length > 0) {
+      extraInfo += `\nMəhsulun adı: ${productNames.join(', ')}. Bu adı captionda təbii şəkildə istifadə et.`;
     }
-    if (photo.personName?.trim()) {
-      extraInfo += `\nŞəkildəki şəxs: ${photo.personName.trim()}. Bu adı captionda təbii şəkildə istifadə et.`;
+    if (personNames.length > 0) {
+      extraInfo += `\nŞəkildəki şəxs(lər): ${personNames.join(', ')}. Bu ad(lar)ı captionda təbii şəkildə istifadə et.`;
     }
 
     const langGuard = `\n\nÇOX MÜHÜM — DİL QAYDASI: Mətn YALNIZ Azərbaycan dilində olmalıdır, Türkiyə türkcəsi QƏTİYYƏN işlənməməlidir. Türk dilinə aid söz və ifadələri belə əvəzlə:\n"müzik" yox, "musiqi" yaz. "tikə" yox (Azərbaycan dilində "bir tikə təravət" kimi söz birləşməsi yoxdur). "çok" yox, "çox" yaz. "güzel" yox, "gözəl" yaz. "harika" yox, "əla"/"möhtəşəm" yaz. "şimdi" yox, "indi" yaz. "değil" yox, "deyil" yaz. "yapıyor" yox, "edir"/"hazırlayır" yaz. Əgər bir sözün Azərbaycan dilində adi qarşılığından əmin deyilsənsə, daha sadə və tanış bir söz seç, riskli/türk mənşəli söz işlətmə.`;
@@ -1960,12 +2032,16 @@ export default function App() {
       ? `\n\nÇOX VACİB: Bu captionun açılış cümləsi "${venueRef}" sözü ilə BAŞLAMASIN, və əvvəlki cəhddən tamamilə fərqli olsun. Əvvəlki cəhdin açılışı bu idi: "${previousOpening}..." — bunu TƏKRARLAMA, tamamilə başqa bir cümlə qurusu, başqa bir fikir ilə başla (sual, fakt, emoji, müştəri təcrübəsi və s.).`
       : `\n\nBu captionun açılış cümləsi "${venueRef}" sözü ilə BAŞLAMASIN — fərqli, orijinal bir açılış tap (sual, duyğu təsviri, qısa fakt, və ya emoji ilə açılan ifadə ola bilər).`;
 
+    const baseInstruction = isCarousel
+      ? `Bu ${carouselMembers.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz (caption birinci şəklə əsaslanaraq yazılsın, amma bütün karusel üçün keçərli olsun). Məkan: "${venueRef}".`
+      : `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}".`;
+
     try {
       const caption = await callAIWithFallback({
         primaryProvider: aiProvider,
         aiSettings,
         onFallback: (from, to) => addToast(`⚡ ${from} limiti → ${to}-ə keçildi`, 'info'),
-        userText: `Bu restoran şəkili üçün Azərbaycanca Instagram caption yaz. Məkan: "${venueRef}". Maksimum 2 cümlə olsun (1 cümlə də kifayətdir, uzatmaq lazım deyil). Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`,
+        userText: `${baseInstruction} Maksimum 2 cümlə olsun (1 cümlə də kifayətdir, uzatmaq lazım deyil). Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`,
         imageBase64: photo.dataUrl.split(',')[1],
         maxTokens: includeRussian ? 450 : 250,
       });
@@ -2135,27 +2211,42 @@ export default function App() {
     if (photos.length === 0) return;
     const items = buildPostItems(photos, carousels, captionsMap);
     const seq = buildSequence(items);
-    const days = new Date(year, monthIndex + 1, 0).getDate();
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const startDay = Math.max(1, Math.min(planStartDay, daysInMonth));
+    const endDay = planEndDay != null ? planEndDay : daysInMonth;
+
+    // Tarix aralığı ayın sonunu keçirsə (məs. 26-dan 10-na qədər), bu, növbəti
+    // aya keçən bir aralıq deməkdir. Hər "gün" üçün { day, label } saxlayırıq —
+    // label görünüşdə "26 İyun", "1 İyul" kimi tarix göstərmək üçündür.
+    const dayList = [];
+    if (endDay >= startDay) {
+      for (let d = startDay; d <= endDay; d++) dayList.push({ day: d, monthOffset: 0 });
+    } else {
+      // Aydan aşaraq növbəti aya keçən aralıq
+      for (let d = startDay; d <= daysInMonth; d++) dayList.push({ day: d, monthOffset: 0 });
+      for (let d = 1; d <= endDay; d++) dayList.push({ day: d, monthOffset: 1 });
+    }
 
     // Xüsusi günlər (Party və s.) — bu günlər rezerv olunur, AI/random
     // ardıcıllıq onlara toxunmur. Qalan şəkil/video yalnız "boş" günlərə paylanır.
-    const specialDayNums = Object.keys(specialDays).map(Number).filter((d) => d >= 1 && d <= days);
-    const specialDaySet = new Set(specialDayNums);
-    const regularDaysCount = days - specialDaySet.size;
+    // specialDays açarı bu aralıqdaki "day" nömrəsinə uyğundur (ay daxilində).
+    const specialDaySet = new Set(dayList.filter((dl) => specialDays[dl.day] && dl.monthOffset === 0).map((dl) => dl.day));
+    const regularSlots = dayList.filter((dl) => !(dl.monthOffset === 0 && specialDaySet.has(dl.day)));
 
-    const counts = regularDaysCount > 0 ? distributeDays(seq.length, regularDaysCount) : [];
+    const counts = regularSlots.length > 0 ? distributeDays(seq.length, regularSlots.length) : [];
     const result = [];
     let idx = 0;
-    let regularDayCursor = 0;
+    let regularCursor = 0;
 
-    for (let d = 1; d <= days; d++) {
-      if (specialDaySet.has(d)) {
-        // Xüsusi gün — şəkil yoxdur, sadəcə yazılmış caption (varsa)
-        const sd = specialDays[d];
+    dayList.forEach((dl) => {
+      const isSpecial = dl.monthOffset === 0 && specialDaySet.has(dl.day);
+      if (isSpecial) {
+        const sd = specialDays[dl.day];
         result.push({
-          day: d,
+          day: dl.day,
+          monthOffset: dl.monthOffset,
           posts: sd.caption ? [{
-            id: `special:${d}`,
+            id: `special:${dl.day}`,
             type: 'special',
             category: sd.label || 'Xüsusi gün',
             caption: sd.caption,
@@ -2165,12 +2256,12 @@ export default function App() {
           specialLabel: sd.label || (uiLang === 'ru' ? 'Особый день' : 'Xüsusi gün'),
         });
       } else {
-        const c = counts[regularDayCursor] || 0;
-        result.push({ day: d, posts: seq.slice(idx, idx + c) });
+        const c = counts[regularCursor] || 0;
+        result.push({ day: dl.day, monthOffset: dl.monthOffset, posts: seq.slice(idx, idx + c) });
         idx += c;
-        regularDayCursor++;
+        regularCursor++;
       }
-    }
+    });
 
     setSchedule(result);
     scheduleSignatureRef.current = computeDataSignature(photos, carousels, captionsMap);
@@ -2183,7 +2274,7 @@ export default function App() {
       setPublished(new Set());
     }
     addToast('Plan yaradıldı', 'success');
-  }, [photos, carousels, captionsMap, year, monthIndex, addToast, profilePrefix, specialDays, uiLang]);
+  }, [photos, carousels, captionsMap, year, monthIndex, addToast, profilePrefix, specialDays, uiLang, planStartDay, planEndDay]);
 
   const togglePublished = useCallback((postId) => {
     setPublished((prev) => {
@@ -2607,6 +2698,8 @@ export default function App() {
                   photos={photos} carousels={carousels} suggestedCarousels={suggestedCarousels}
                   onConfirmSuggestion={confirmSuggestion} onDismissSuggestion={dismissSuggestion}
                   onRemoveCarousel={removeCarousel}
+                  onReorderCarouselPhoto={reorderCarouselPhoto}
+                  onReorderSuggestion={reorderSuggestedCarousel}
                   uiLang={uiLang}
                 />
               </>
@@ -2832,7 +2925,7 @@ export default function App() {
                                   onChange={() => togglePhotoIsVideo(item.members.map((m) => m.id))}
                                   className="rounded border-stone-300 dark:border-stone-600 text-red-600 focus:ring-red-400"
                                 />
-                                🎬 {uiLang === 'ru' ? 'Это видео (превью)' : 'Bu videodur (thumbnail)'}
+                                🎬 {uiLang === 'ru' ? 'Это видео' : 'Bu videodur'}
                               </label>
                             </div>
                           </div>
@@ -2907,44 +3000,117 @@ export default function App() {
 
               {aiCaptions.size > 0 && (
                 <div className="mt-4 space-y-3 max-h-96 overflow-y-auto pr-1">
-                  {photos.map((p) => {
-                    const cap = p.number != null ? aiCaptions.get(p.number) : undefined;
-                    const isCopied = copiedGenCaption === p.number;
-                    return (
-                      <div key={p.id} className="flex gap-3 border border-stone-100 rounded-xl p-3 bg-stone-50 dark:bg-stone-950">
-                        <img src={p.dataUrl} alt={p.filename} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-stone-400 font-mono mb-1 dark:text-stone-500">#{p.number ?? '?'} — {p.filename}</p>
-                          {cap ? (
-                            <>
-                              <p className="text-sm text-stone-700 leading-snug dark:text-stone-300">{cap}</p>
-                              <div className="flex gap-2 mt-2">
-                                <button
-                                  onClick={async () => {
-                                    await navigator.clipboard.writeText(cap);
-                                    setCopiedGenCaption(p.number);
-                                    setTimeout(() => setCopiedGenCaption(null), 1800);
-                                  }}
-                                  className="text-[10px] border border-stone-200 rounded-md px-1.5 py-0.5 text-stone-500 hover:bg-white flex items-center gap-0.5 dark:text-stone-400 dark:border-stone-700"
-                                >
-                                  {isCopied ? <><Check size={10} /> Kopyalandı</> : <><Copy size={10} /> Kopyala</>}
-                                </button>
-                                <button
-                                  onClick={() => regenOneCaption(p)}
-                                  disabled={regenLoadingNums.has(p.number)}
-                                  className="text-[10px] border border-orange-200 bg-orange-50 rounded-md px-1.5 py-0.5 text-orange-600 hover:bg-orange-100 flex items-center gap-0.5 disabled:opacity-50"
-                                >
-                                  {regenLoadingNums.has(p.number) ? <><Loader2 size={10} className="animate-spin" /> Yazılır...</> : <><RefreshCw size={10} /> Yenidən yaz</>}
-                                </button>
-                              </div>
-                            </>
+                  {(() => {
+                    // Carousel üzvlərini qruplaşdır — kateqoriya bölməsindəki kimi,
+                    // bir kart, bir caption göstərilir, ayrı-ayrı yox.
+                    const carouselNumberSet = new Set(carousels.flatMap((c) => c.numbers));
+                    const processedNumbers = new Set();
+                    const reviewItems = [];
+
+                    carousels.forEach((c) => {
+                      const members = c.numbers
+                        .map((n) => photos.find((p) => p.number === n))
+                        .filter(Boolean)
+                        .sort((a, b) => a.number - b.number);
+                      if (members.length === 0) return;
+                      members.forEach((m) => processedNumbers.add(m.number));
+                      reviewItems.push({ type: 'carousel', members, cover: members[0] });
+                    });
+
+                    photos.forEach((p) => {
+                      if (p.number != null && processedNumbers.has(p.number)) return;
+                      reviewItems.push({ type: 'single', members: [p], cover: p });
+                    });
+
+                    return reviewItems.map((item) => {
+                      const p = item.cover;
+                      const cap = p.number != null ? aiCaptions.get(p.number) : undefined;
+                      const isCopied = copiedGenCaption === p.number;
+                      const isEditing = editingGenCaption === p.number;
+                      const key = item.type === 'carousel' ? `carousel-${item.members.map((m) => m.number).join('-')}` : p.id;
+
+                      return (
+                        <div key={key} className="flex gap-3 border border-stone-100 rounded-xl p-3 bg-stone-50 dark:bg-stone-950 dark:border-stone-800">
+                          {item.type === 'carousel' ? (
+                            <div className="flex gap-1 flex-shrink-0">
+                              {item.members.slice(0, 2).map((m) => (
+                                <img key={m.id} src={m.dataUrl} alt={m.filename} className="w-14 h-14 rounded-lg object-cover" />
+                              ))}
+                              {item.members.length > 2 && (
+                                <div className="w-14 h-14 rounded-lg bg-stone-200 dark:bg-stone-800 flex items-center justify-center text-xs text-stone-500 dark:text-stone-400 flex-shrink-0">
+                                  +{item.members.length - 2}
+                                </div>
+                              )}
+                            </div>
                           ) : (
-                            <p className="text-xs text-stone-400 italic dark:text-stone-500">caption gözlənilir...</p>
+                            <img src={p.dataUrl} alt={p.filename} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
                           )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-stone-400 font-mono mb-1 dark:text-stone-500 flex items-center gap-1.5">
+                              {item.type === 'carousel' ? (
+                                <><Layers size={11} /> {uiLang === 'ru' ? 'Карусель' : 'Karusel'}: #{item.members.map((m) => m.number).join(', #')}</>
+                              ) : (
+                                <>#{p.number ?? '?'} — {p.filename}</>
+                              )}
+                            </p>
+                            {isEditing ? (
+                              <div>
+                                <textarea
+                                  value={editGenCaptionValue}
+                                  onChange={(e) => setEditGenCaptionValue(e.target.value)}
+                                  rows={3}
+                                  autoFocus
+                                  className="w-full text-sm border border-orange-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none dark:bg-stone-800 dark:border-orange-500 dark:text-stone-200"
+                                />
+                                <div className="flex gap-2 mt-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setAiCaptions((prev) => new Map([...prev, [p.number, editGenCaptionValue]]));
+                                      setEditingGenCaption(null);
+                                    }}
+                                    className="text-[10px] bg-stone-900 text-white rounded-md px-2 py-1 flex items-center gap-1 hover:bg-stone-700"
+                                  ><Check size={10} /> {uiLang === 'ru' ? 'Сохранить' : 'Saxla'}</button>
+                                  <button
+                                    onClick={() => setEditingGenCaption(null)}
+                                    className="text-[10px] border border-stone-200 rounded-md px-2 py-1 hover:bg-white dark:border-stone-700"
+                                  >{uiLang === 'ru' ? 'Отмена' : 'Ləğv et'}</button>
+                                </div>
+                              </div>
+                            ) : cap ? (
+                              <>
+                                <p className="text-sm text-stone-700 leading-snug dark:text-stone-300">{cap}</p>
+                                <div className="flex gap-2 mt-2">
+                                  <button
+                                    onClick={async () => {
+                                      await navigator.clipboard.writeText(cap);
+                                      setCopiedGenCaption(p.number);
+                                      setTimeout(() => setCopiedGenCaption(null), 1800);
+                                    }}
+                                    className="text-[10px] border border-stone-200 rounded-md px-1.5 py-0.5 text-stone-500 hover:bg-white flex items-center gap-0.5 dark:text-stone-400 dark:border-stone-700"
+                                  >
+                                    {isCopied ? <><Check size={10} /> Kopyalandı</> : <><Copy size={10} /> Kopyala</>}
+                                  </button>
+                                  <button
+                                    onClick={() => { setEditingGenCaption(p.number); setEditGenCaptionValue(cap); }}
+                                    className="text-[10px] border border-stone-200 rounded-md px-1.5 py-0.5 text-stone-500 hover:bg-white flex items-center gap-0.5 dark:text-stone-400 dark:border-stone-700"
+                                  >✏️ {uiLang === 'ru' ? 'Редактировать' : 'Düzəliş et'}</button>
+                                  <button
+                                    onClick={() => regenOneCaption(item.cover, item.type === 'carousel' ? item.members : null)}
+                                    disabled={regenLoadingNums.has(p.number)}
+                                    className="text-[10px] border border-orange-200 bg-orange-50 rounded-md px-1.5 py-0.5 text-orange-600 hover:bg-orange-100 flex items-center gap-0.5 disabled:opacity-50"
+                                  >
+                                    {regenLoadingNums.has(p.number) ? <><Loader2 size={10} className="animate-spin" /> Yazılır...</> : <><RefreshCw size={10} /> Yenidən yaz</>}
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-xs text-stone-400 italic dark:text-stone-500">caption gözlənilir...</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>
@@ -3084,6 +3250,19 @@ export default function App() {
                   <input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value) || year)}
                     className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-24 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
                 </div>
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'С числа' : 'Ayın neçəsindən'}</label>
+                  <input type="number" min={1} max={31} value={planStartDay}
+                    onChange={(e) => setPlanStartDay(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
+                </div>
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'По число' : 'Neçəsinə qədər'}</label>
+                  <input type="number" min={1} max={31}
+                    value={planEndDay != null ? planEndDay : new Date(year, monthIndex + 1, 0).getDate()}
+                    onChange={(e) => setPlanEndDay(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
+                </div>
                 <button onClick={generateSchedule} disabled={photos.length === 0}
                   className="bg-orange-600 text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 hover:bg-orange-700 disabled:opacity-50 shadow-md shadow-orange-600/20 transition-all hover:shadow-lg hover:shadow-orange-600/30">
                   <Calendar size={16} /> {t('generatePlanBtn')}
@@ -3099,6 +3278,11 @@ export default function App() {
                   </>
                 )}
               </div>
+              <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-2">
+                {uiLang === 'ru'
+                  ? 'Если "По число" меньше "С числа", план продолжится в следующем месяце (напр. с 26 по 10).'
+                  : 'Əgər "Neçəsinə qədər" rəqəmi "Ayın neçəsindən"dən kiçikdirsə, plan növbəti aya keçəcək (məs. 26-dan 10-na qədər).'}
+              </p>
 
               {photos.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-stone-100">
