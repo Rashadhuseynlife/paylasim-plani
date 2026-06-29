@@ -279,6 +279,45 @@ const OTHER_COLOR = { bg: 'bg-stone-200', text: 'text-stone-600', dot: '#78716c'
 const GROUP_RINGS = ['ring-orange-400', 'ring-emerald-400', 'ring-violet-400', 'ring-sky-400', 'ring-rose-400', 'ring-amber-400'];
 const MONTHS = ['Yanvar','Fevral','Mart','Aprel','May','İyun','İyul','Avqust','Sentyabr','Oktyabr','Noyabr','Dekabr'];
 
+/* ====================================================================
+   CAPTION YAZIM QAYDALARI — istifadəçinin real bəyəndiyi/bəyənmədiyi
+   caption nümunələrindən çıxarılıb. Həm "Hamısı üçün yaz", həm "Yenidən
+   yaz" funksiyaları bu siyahıları paylaşır ki, davranış uyğun olsun.
+   ==================================================================== */
+const CAPTION_BANNED_PATTERNS = [
+  '"Hər [söz] bir hekayədir/macəradır" və ya bənzər ümumiləşdirici fəlsəfi cümlə ilə BAŞLAMA (məs. "Hər ziyarət ayrı bir hekayədir" YOX)',
+  '"[Məkan adı]-da/də hər an ayrı vibe-dır" tipli ümumi, məzmunsuz açılışla BAŞLAMA',
+  '"ritm" sözünü İŞLƏTMƏ — bu söz artıq həddən artıq istifadə olunub, klişeyə çevrilib',
+  '"atmosfer" sözünü tez-tez İŞLƏTMƏ — yalnız doğrudan lazım olanda, captionda 1 dəfədən çox yox',
+  'Eyni metaforanı (hekayə, yolculuq, ritm, dünya) iki captionda təkrar İŞLƏTMƏ',
+  'İngilis dilində YAZMA — mətn tam Azərbaycan dilində olmalıdır, bir kəlmə də ingiliscə qalmamalıdır',
+  'Mücərrəd, fəlsəfi, "həyat haqqında" cümlələrlə başlama (məs. "Gündəlik həyatın ritmində yavaşlamaq və zövq verən anları seçmək çox vacibdir" tipli ağır, tərcümə-kimi səslənən cümlə YOX) — sadə, canlı, gündəlik danışıq dilinə yaxın yaz',
+  '"çalışırıq ki... nəinki..., həm də..." kimi rəsmi, sənəd-üslubu cümlə qurma — bu, təbii Azərbaycan danışıq dilində işlənmir',
+];
+
+// Müştərinin özünün bəyəndiyi, təbii səslənən caption-larından götürülüb.
+// Qısa, canlı, birbaşa, ağır fəlsəfi giriş cümləsi olmadan yazılıb — hədəf budur.
+const CAPTION_GOOD_EXAMPLES = `
+- "İsti havalara yeni içkilərimizlə fasilə verin 🔥🧊"
+- "Rahatlıq, stil və bir az da enerji ❤️"
+- "Günün ilk enerjisi hazırdır ⚡️ Bir az buz, bir az espresso və baristamızın sehrli toxunuşları"
+- "Qarışıq günün enerji qaynağı: bir iced latte və bizim vibe ☕️"
+- "Seçim sizdə olsaydı, məkanımızda hansı musiqi səslənərdi? 😁"`;
+
+const CAPTION_CTA_STYLES = [
+  'birbaşa sual ver (məs. "Bunu hələ sınamısan?")',
+  'qısa bir əmr/dəvətlə başla (məs. "Gəl, bu axşam bura")',
+  'konkret bir an/səhnə təsviri ilə başla (kameranın gördüyü kimi, mücərrəd deyil)',
+  'rəqəm və ya konkret fakt ilə başla (məs. "3 saat bişən...")',
+  'tək bir emoji + qısa fraza ilə başla (cümlə qurmadan, "İsti havalara yeni içkilərimizlə fasilə verin" tipli qısa açılış kimi)',
+  'müştərinin reaksiyasını sitat kimi ver (məs. "İlk dəfə görəndə hamı dayanır")',
+  'kontrast/müqayisə ilə başla (məs. "Adi deyil, fərqlidir")',
+  'birbaşa məhsulun/anın adını çəkməklə başla, giriş cümləsi olmadan (məs. "Qarışıq günün enerji qaynağı: bir iced latte")',
+];
+
+const CAPTION_LANG_GUARD = `\n\nÇOX MÜHÜM — DİL QAYDASI: Mətn YALNIZ Azərbaycan dilində olmalıdır, Türkiyə türkcəsi QƏTİYYƏN işlənməməlidir. Türk dilinə aid söz və ifadələri belə əvəzlə:\n"müzik" yox, "musiqi" yaz. "tikə" yox (Azərbaycan dilində "bir tikə təravət" kimi söz birləşməsi yoxdur). "çok" yox, "çox" yaz. "güzel" yox, "gözəl" yaz. "harika" yox, "əla"/"möhtəşəm" yaz. "şimdi" yox, "indi" yaz. "değil" yox, "deyil" yaz. "yapıyor" yox, "edir"/"hazırlayır" yaz. Əgər bir sözün Azərbaycan dilində adi qarşılığından əmin deyilsənsə, daha sadə və tanış bir söz seç, riskli/türk mənşəli söz işlətmə.`;
+
+
 // YENİ: Çoxlu AI provayder dəstəyi. Claude bu mühitdə açarsız işləyir
 // (açar artifact sandbox-u tərəfindən avtomatik əlavə edilir); OpenAI və
 // Gemini üçün istifadəçi öz API açarını daxil etməlidir.
@@ -1838,22 +1877,12 @@ export default function App() {
       if (opening) usedOpenings.push(opening);
     });
 
-    const BANNED_PATTERNS = [
-      '"Hər [söz] bir hekayədir" və ya bənzər ümumiləşdirici cümlə ilə BAŞLAMA',
-      '"[Məkan adı]-da/də" ilə BAŞLAMA',
-      'Eyni metaforanı (hekayə, yolculuq, dünya) iki captionda təkrar İŞLƏTMƏ',
-    ];
-
-    const CTA_STYLES = [
-      'birbaşa sual ver (məs. "Bunu hələ sınamısan?")',
-      'qısa bir əmr/dəvətlə başla (məs. "Gəl, bu axşam bura")',
-      'konkret bir an/səhnə təsviri ilə başla (kameranın gördüyü kimi, mücərrəd deyil)',
-      'rəqəm və ya konkret fakt ilə başla (məs. "3 saat bişən...")',
-      'tək bir emoji + qısa fraza ilə başla (cümlə qurmadan)',
-      'müştərinin reaksiyasını sitat kimi ver (məs. "İlk dəfə görəndə hamı dayanır")',
-      'kontrast/müqayisə ilə başla (məs. "Adi deyil, fərqlidir")',
-      'birbaşa məhsulun/anın adını çəkməklə başla, giriş cümləsi olmadan',
-    ];
+    // Qaydalar/nümunələr indi modul səviyyəsindəki paylaşılan konstantalardan
+    // gəlir (CAPTION_BANNED_PATTERNS, CAPTION_GOOD_EXAMPLES, CAPTION_CTA_STYLES)
+    // — beləcə "Hamısı üçün yaz" və "Yenidən yaz" eyni qaydalara tabe olur.
+    const BANNED_PATTERNS = CAPTION_BANNED_PATTERNS;
+    const GOOD_STYLE_EXAMPLES = CAPTION_GOOD_EXAMPLES;
+    const CTA_STYLES = CAPTION_CTA_STYLES;
 
     const fetchCaption = async (item, idx) => {
       try {
@@ -1876,14 +1905,16 @@ export default function App() {
           : '';
 
         // Təkrarçılığı önləmək üçün: əvvəlki başlanğıclar siyahısı + bu caption
-        // üçün təyin olunmuş üslub göstərişi + qadağan edilmiş ümumi qəliblər.
+        // üçün təyin olunmuş üslub göstərişi + qadağan edilmiş ümumi qəliblər
+        // + təbii səslənən real nümunələr (müştərinin özünün bəyəndiyi üslub).
         const ctaStyle = CTA_STYLES[idx % CTA_STYLES.length];
         const bannedList = BANNED_PATTERNS.map((b) => `- ${b}`).join('\n');
+        const styleReference = `\n\nTƏBİİ SƏSLƏNMƏ ÜÇÜN NÜMUNƏLƏR (bu qədər qısa və canlı yaz, eyni sözləri köçürmə, yalnız üslubu örnək götür):${GOOD_STYLE_EXAMPLES}`;
         const varietySection = usedOpenings.length > 0
-          ? `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.\nƏvvəlki captionların açılışları (bunlardan FƏRQLİ ol): ${usedOpenings.slice(-8).map((o) => `"${o}..."`).join(', ')}.\nBu captionun açılış üslubu: ${ctaStyle}.`
-          : `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.\nBu captionun açılış üslubu: ${ctaStyle}.`;
+          ? `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.\nƏvvəlki captionların açılışları (bunlardan FƏRQLİ ol): ${usedOpenings.slice(-8).map((o) => `"${o}..."`).join(', ')}.\nBu captionun açılış üslubu: ${ctaStyle}.${styleReference}`
+          : `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.\nBu captionun açılış üslubu: ${ctaStyle}.${styleReference}`;
 
-        const langGuard = `\n\nÇOX MÜHÜM — DİL QAYDASI: Mətn YALNIZ Azərbaycan dilində olmalıdır, Türkiyə türkcəsi QƏTİYYƏN işlənməməlidir. Türk dilinə aid söz və ifadələri belə əvəzlə:\n"müzik" yox, "musiqi" yaz. "tikə" yox (Azərbaycan dilində "bir tikə təravət" kimi söz birləşməsi yoxdur). "çok" yox, "çox" yaz. "güzel" yox, "gözəl" yaz. "harika" yox, "əla"/"möhtəşəm" yaz. "şimdi" yox, "indi" yaz. "değil" yox, "deyil" yaz. "yapıyor" yox, "edir"/"hazırlayır" yaz. Əgər bir sözün Azərbaycan dilində adi qarşılığından əmin deyilsənsə, daha sadə və tanış bir söz seç, riskli/türk mənşəli söz işlətmə.`;
+        const langGuard = CAPTION_LANG_GUARD;
 
         const userText = isCarousel
           ? `Bu ${item.members.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz. Məkan: "${venueRef}". Bütün şəkillər birlikdə paylaşılacaq. Maksimum 2 cümlə olsun (1 cümlə də kifayətdir, uzatmaq lazım deyil). Yalnız caption mətni yaz, başqa heç nə əlavə etmə.${extraInfo}${guideSection}${varietySection}${langGuard}${russianSection}`
@@ -2018,7 +2049,7 @@ export default function App() {
       extraInfo += `\nŞəkildəki şəxs(lər): ${personNames.join(', ')}. Bu ad(lar)ı captionda təbii şəkildə istifadə et.`;
     }
 
-    const langGuard = `\n\nÇOX MÜHÜM — DİL QAYDASI: Mətn YALNIZ Azərbaycan dilində olmalıdır, Türkiyə türkcəsi QƏTİYYƏN işlənməməlidir. Türk dilinə aid söz və ifadələri belə əvəzlə:\n"müzik" yox, "musiqi" yaz. "tikə" yox (Azərbaycan dilində "bir tikə təravət" kimi söz birləşməsi yoxdur). "çok" yox, "çox" yaz. "güzel" yox, "gözəl" yaz. "harika" yox, "əla"/"möhtəşəm" yaz. "şimdi" yox, "indi" yaz. "değil" yox, "deyil" yaz. "yapıyor" yox, "edir"/"hazırlayır" yaz. Əgər bir sözün Azərbaycan dilində adi qarşılığından əmin deyilsənsə, daha sadə və tanış bir söz seç, riskli/türk mənşəli söz işlətmə.`;
+    const langGuard = CAPTION_LANG_GUARD;
 
     const russianSection = includeRussian
       ? `\n\nMÜHÜM: Captionu əvvəlcə Azərbaycan dilində yaz. Sonra İKİ boş sətirdən sonra, ayrıca bir sətirdə YALNIZ 🇷🇺 emojisini yaz, sonra YENİ sətirdə həmin mətnin rus dilinə tərcüməsini yaz. Format dəqiq belə olsun (sətr sonlarına diqqət et):\n[Azərbaycan dilində caption]\n\n🇷🇺\n[Rus dilində tərcümə]\nBaşqa heç bir başlıq, izahat və ya əlavə mətn yazma — yalnız bu üç hissəni (AZ mətn, 🇷🇺, RU mətn) yaz.`
@@ -2028,9 +2059,11 @@ export default function App() {
     // "yenidən yaz" düyməsi dəfələrlə basılanda eyni cümlə ilə başlamasın deyə.
     const previousCaption = aiCaptions.get(photoNum) || '';
     const previousOpening = previousCaption.split('\n')[0].trim().split(/\s+/).slice(0, 8).join(' ');
+    const bannedList = CAPTION_BANNED_PATTERNS.map((b) => `- ${b}`).join('\n');
+    const styleReference = `\n\nTƏBİİ SƏSLƏNMƏ ÜÇÜN NÜMUNƏLƏR (bu qədər qısa və canlı yaz, eyni sözləri köçürmə, yalnız üslubu örnək götür):${CAPTION_GOOD_EXAMPLES}`;
     const varietySection = previousOpening
-      ? `\n\nÇOX VACİB: Bu captionun açılış cümləsi "${venueRef}" sözü ilə BAŞLAMASIN, və əvvəlki cəhddən tamamilə fərqli olsun. Əvvəlki cəhdin açılışı bu idi: "${previousOpening}..." — bunu TƏKRARLAMA, tamamilə başqa bir cümlə qurusu, başqa bir fikir ilə başla (sual, fakt, emoji, müştəri təcrübəsi və s.).`
-      : `\n\nBu captionun açılış cümləsi "${venueRef}" sözü ilə BAŞLAMASIN — fərqli, orijinal bir açılış tap (sual, duyğu təsviri, qısa fakt, və ya emoji ilə açılan ifadə ola bilər).`;
+      ? `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.\nƏvvəlki cəhdin açılışı bu idi (TƏKRARLAMA): "${previousOpening}..." — tamamilə başqa bir cümlə qurusu, başqa bir fikir ilə başla (sual, fakt, emoji, müştəri təcrübəsi və s.).${styleReference}`
+      : `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.${styleReference}`;
 
     const baseInstruction = isCarousel
       ? `Bu ${carouselMembers.length} şəkillik Instagram carousel-i üçün Azərbaycanca tək bir caption yaz (caption birinci şəklə əsaslanaraq yazılsın, amma bütün karusel üçün keçərli olsun). Məkan: "${venueRef}".`
