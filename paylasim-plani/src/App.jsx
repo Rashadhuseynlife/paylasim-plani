@@ -315,7 +315,7 @@ const CAPTION_CTA_STYLES = [
   'birbaşa məhsulun/anın adını çəkməklə başla, giriş cümləsi olmadan (məs. "Qarışıq günün enerji qaynağı: bir iced latte")',
 ];
 
-const CAPTION_LANG_GUARD = `\n\nÇOX MÜHÜM — DİL QAYDASI: Mətn YALNIZ Azərbaycan dilində olmalıdır, Türkiyə türkcəsi QƏTİYYƏN işlənməməlidir. Türk dilinə aid söz və ifadələri belə əvəzlə:\n"müzik" yox, "musiqi" yaz. "tikə" yox (Azərbaycan dilində "bir tikə təravət" kimi söz birləşməsi yoxdur). "çok" yox, "çox" yaz. "güzel" yox, "gözəl" yaz. "harika" yox, "əla"/"möhtəşəm" yaz. "şimdi" yox, "indi" yaz. "değil" yox, "deyil" yaz. "yapıyor" yox, "edir"/"hazırlayır" yaz. Əgər bir sözün Azərbaycan dilində adi qarşılığından əmin deyilsənsə, daha sadə və tanış bir söz seç, riskli/türk mənşəli söz işlətmə.`;
+const CAPTION_LANG_GUARD = `\n\nÇOX MÜHÜM — DİL QAYDASI: Mətn YALNIZ Azərbaycan dilində olmalıdır, Türkiyə türkcəsi QƏTİYYƏN işlənməməlidir. Türk dilinə aid söz və ifadələri belə əvəzlə:\n"müzik" yox, "musiqi" yaz. "tikə" yox (Azərbaycan dilində "bir tikə təravət" kimi söz birləşməsi yoxdur). "çok" yox, "çox" yaz. "güzel" yox, "gözəl" yaz. "harika" yox, "əla"/"möhtəşəm" yaz. "şimdi" yox, "indi" yaz. "değil" yox, "deyil" yaz. "yapıyor" yox, "edir"/"hazırlayır" yaz. "kadeh" yox, "qədəh" yaz. "yudum" yox, "qurtum" yaz. "bardak" yox, "stəkan" yaz. Əgər bir sözün Azərbaycan dilində adi qarşılığından əmin deyilsənsə, daha sadə və tanış bir söz seç, riskli/türk mənşəli söz işlətmə.`;
 
 
 // YENİ: Çoxlu AI provayder dəstəyi. Claude bu mühitdə açarsız işləyir
@@ -1016,23 +1016,34 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
       </div>
 
       <div className="divide-y divide-stone-100">
-        {schedule.map((day) => {
-          const visiblePosts = day.posts.filter(isVisible);
-          if (filter !== 'all' && visiblePosts.length === 0) return null;
-          return (
-            <div key={day.day} className="py-4 first:pt-0">
-              <div className="flex items-center mb-3">
-                <span className="menu-font text-2xl font-semibold text-stone-800 w-12 flex-shrink-0 dark:text-stone-200">{String(day.day).padStart(2, '0')}</span>
-                {day.specialLabel && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400 font-medium mr-2 flex-shrink-0">
-                    🎉 {day.specialLabel}
-                  </span>
-                )}
-                <span className="dotted-leader" />
-                <span className="text-xs text-stone-400 dark:text-stone-500">
-                  {filter === 'all'
-                    ? (uiLang === 'ru' ? `${day.posts.length} публикаций` : `${day.posts.length} paylaşım`)
-                    : `${visiblePosts.length}/${day.posts.length}`}
+        {(() => {
+          const monthsList = uiLang === 'ru' ? MONTHS_RU : MONTHS;
+          // Plan iki fərqli aya yayılırsa (məs. 29 İyun — 30 İyul), gün
+          // rəqəmləri təkrarlana bilər (hər ikisində "1" ola bilər) —
+          // bunu fərqləndirmək üçün ay adını da göstəririk.
+          const spansMultipleMonths = schedule.length > 0 &&
+            schedule.some((d) => d.month !== schedule[0].month || d.year !== schedule[0].year);
+          return schedule.map((day) => {
+            const dayKey = `${day.year ?? 0}-${day.month ?? 0}-${day.day}`;
+            const visiblePosts = day.posts.filter(isVisible);
+            if (filter !== 'all' && visiblePosts.length === 0) return null;
+            return (
+              <div key={dayKey} className="py-4 first:pt-0">
+                <div className="flex items-center mb-3">
+                  <span className="menu-font text-2xl font-semibold text-stone-800 w-12 flex-shrink-0 dark:text-stone-200">{String(day.day).padStart(2, '0')}</span>
+                  {spansMultipleMonths && day.month != null && (
+                    <span className="text-[10px] text-stone-400 dark:text-stone-500 mr-2 flex-shrink-0 uppercase tracking-wide">{monthsList[day.month]?.slice(0, 3)}</span>
+                  )}
+                  {day.specialLabel && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400 font-medium mr-2 flex-shrink-0">
+                      🎉 {day.specialLabel}
+                    </span>
+                  )}
+                  <span className="dotted-leader" />
+                  <span className="text-xs text-stone-400 dark:text-stone-500">
+                    {filter === 'all'
+                      ? (uiLang === 'ru' ? `${day.posts.length} публикаций` : `${day.posts.length} paylaşım`)
+                      : `${visiblePosts.length}/${day.posts.length}`}
                 </span>
               </div>
               {visiblePosts.length === 0 ? (
@@ -1152,7 +1163,7 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                                     defaultValue={day.day}
                                     onChange={(e) => {
                                       const toDay = parseInt(e.target.value, 10);
-                                      onMovePostToDay(post.id, day.day, toDay);
+                                      onMovePostToDay(post.id, day.day, toDay, day.month, day.year, day.month, day.year);
                                       setMovingPostId(null);
                                     }}
                                     onBlur={() => setMovingPostId(null)}
@@ -1182,8 +1193,9 @@ function ScheduleView({ schedule, monthIndex, year, published, categories, onTog
                 </div>
               )}
             </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
     </div>
   );
@@ -1215,10 +1227,13 @@ export default function App() {
   const [captionsRaw, setCaptionsRaw] = useState('');
   const [monthIndex, setMonthIndex] = useState(5);
   const [year, setYear] = useState(2026);
-  // Plan tarix aralığı — defolt olaraq ayın bütün günləri, amma istəyə
-  // bağlı fərqli aralıq seçilə bilər (məs. 26-dan növbəti ayın 10-na qədər)
+  // Plan tarix aralığı — başlanğıc ay/il yuxarıdakı monthIndex/year-dir.
+  // Son tarix isə ayrıca ay/il/gün kimi saxlanılır ki, aralıq 2 fərqli aya
+  // (məs. 29 İyun — 30 İyul) düşə bilsin.
   const [planStartDay, setPlanStartDay] = useState(1);
-  const [planEndDay, setPlanEndDay] = useState(null); // null = ayın son günü
+  const [planEndDay, setPlanEndDay] = useState(null); // null = başlanğıc ayın son günü
+  const [planEndMonth, setPlanEndMonth] = useState(null); // null = başlanğıc ay ilə eyni
+  const [planEndYear, setPlanEndYear] = useState(null); // null = başlanğıc il ilə eyni
   // Xüsusi günlər (Party, tədbir və s.) — plan generasiyası bu günlərə
   // toxunmur, sənin yazdığın caption olduğu kimi qalır, şəkil tələb olunmur.
   // Format: { [day]: { label: 'Party', caption: '...' } }
@@ -1287,6 +1302,10 @@ export default function App() {
   const [editingGenCaption, setEditingGenCaption] = useState(null);
   const [editGenCaptionValue, setEditGenCaptionValue] = useState('');
   const [regenLoadingNums, setRegenLoadingNums] = useState(new Set());
+  // Hər şəkil üçün "Yenidən yaz" basıldıqca yaranan BÜTÜN açılışların
+  // tarixçəsini saxlayır (təkcə sonuncunu yox) — AI eyni qəlibə geri
+  // qayıtmasın deyə. Map<photoNumber, string[]>
+  const regenHistoryRef = useRef(new Map());
 
   // switchProfile/addProfile/removeProfile bura (bütün lazımi state-lərdən
   // sonra) köçürülüb — əvvəlcə daha yuxarıda idi, amma orda hələ təyin
@@ -2055,14 +2074,26 @@ export default function App() {
       ? `\n\nMÜHÜM: Captionu əvvəlcə Azərbaycan dilində yaz. Sonra İKİ boş sətirdən sonra, ayrıca bir sətirdə YALNIZ 🇷🇺 emojisini yaz, sonra YENİ sətirdə həmin mətnin rus dilinə tərcüməsini yaz. Format dəqiq belə olsun (sətr sonlarına diqqət et):\n[Azərbaycan dilində caption]\n\n🇷🇺\n[Rus dilində tərcümə]\nBaşqa heç bir başlıq, izahat və ya əlavə mətn yazma — yalnız bu üç hissəni (AZ mətn, 🇷🇺, RU mətn) yaz.`
       : '';
 
-    // Əvvəlki caption-u götürüb, onun açılış cümləsini təkrarlamamağı tələb edirik —
-    // "yenidən yaz" düyməsi dəfələrlə basılanda eyni cümlə ilə başlamasın deyə.
-    const previousCaption = aiCaptions.get(photoNum) || '';
-    const previousOpening = previousCaption.split('\n')[0].trim().split(/\s+/).slice(0, 8).join(' ');
+    // Bu şəkil üçün indiyə qədər "Yenidən yaz" basıldıqca yaranan BÜTÜN
+    // açılışların tarixçəsini götürürük (təkcə hazırkı caption-u yox) —
+    // əks halda AI 3-4 cəhddən sonra köhnə qəlibə "geri qayıdırdı", çünki
+    // yalnız ən son nəticədən qaçmağa çalışırdı.
+    let history = regenHistoryRef.current.get(photoNum);
+    if (!history) {
+      history = [];
+      const currentCaption = aiCaptions.get(photoNum);
+      if (currentCaption) {
+        const azPart = currentCaption.split('\n\n')[0];
+        const opening = azPart.trim().split(/\s+/).slice(0, 8).join(' ');
+        if (opening) history.push(opening);
+      }
+      regenHistoryRef.current.set(photoNum, history);
+    }
+
     const bannedList = CAPTION_BANNED_PATTERNS.map((b) => `- ${b}`).join('\n');
     const styleReference = `\n\nTƏBİİ SƏSLƏNMƏ ÜÇÜN NÜMUNƏLƏR (bu qədər qısa və canlı yaz, eyni sözləri köçürmə, yalnız üslubu örnək götür):${CAPTION_GOOD_EXAMPLES}`;
-    const varietySection = previousOpening
-      ? `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.\nƏvvəlki cəhdin açılışı bu idi (TƏKRARLAMA): "${previousOpening}..." — tamamilə başqa bir cümlə qurusu, başqa bir fikir ilə başla (sual, fakt, emoji, müştəri təcrübəsi və s.).${styleReference}`
+    const varietySection = history.length > 0
+      ? `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.\nİndiyə qədər bu şəkil üçün yazılmış BÜTÜN açılışlar (heç birini TƏKRARLAMA, hamısından tamamilə fərqli ol): ${history.slice(-6).map((o) => `"${o}..."`).join(', ')}.\nYeni, tamamilə fərqli bir fikir/qurum ilə başla.${styleReference}`
       : `\n\nÇOX VACİB — TƏKRARÇILIQ QADAĞASI:\n${bannedList}\n- "${venueRef}" sözü ilə başlama.${styleReference}`;
 
     const baseInstruction = isCarousel
@@ -2080,6 +2111,13 @@ export default function App() {
       });
       if (caption) {
         setAiCaptions((prev) => new Map([...prev, [photoNum, caption]]));
+        const azPart = caption.split('\n\n')[0];
+        const newOpening = azPart.trim().split(/\s+/).slice(0, 8).join(' ');
+        if (newOpening) {
+          const hist = regenHistoryRef.current.get(photoNum) || [];
+          hist.push(newOpening);
+          regenHistoryRef.current.set(photoNum, hist);
+        }
         addToast(`#${photoNum} yenidən yazıldı ✓`, 'success');
       } else {
         throw new Error('Boş cavab gəldi');
@@ -2244,27 +2282,41 @@ export default function App() {
     if (photos.length === 0) return;
     const items = buildPostItems(photos, carousels, captionsMap);
     const seq = buildSequence(items);
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-    const startDay = Math.max(1, Math.min(planStartDay, daysInMonth));
-    const endDay = planEndDay != null ? planEndDay : daysInMonth;
 
-    // Tarix aralığı ayın sonunu keçirsə (məs. 26-dan 10-na qədər), bu, növbəti
-    // aya keçən bir aralıq deməkdir. Hər "gün" üçün { day, label } saxlayırıq —
-    // label görünüşdə "26 İyun", "1 İyul" kimi tarix göstərmək üçündür.
+    // Başlanğıc və son tarixləri tam (il+ay+gün) Date obyektləri kimi qururuq.
+    // Bu, "ayın 26-dan növbəti ayın 10-na" kimi 2 fərqli aya düşən aralıqları
+    // da, "29 İyun — 30 İyul" kimi tam fərqli ay seçimlərini də düzgün
+    // dəstəkləyir — əvvəlki versiya yalnız "ayın günü" rəqəminə baxırdı,
+    // bu da xüsusi günlərin səhv aralığa düşməsinə səbəb olurdu.
+    const endMonth = planEndMonth != null ? planEndMonth : monthIndex;
+    const endYear = planEndYear != null ? planEndYear : year;
+    const daysInStartMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const startDay = Math.max(1, Math.min(planStartDay, daysInStartMonth));
+    const daysInEndMonth = new Date(endYear, endMonth + 1, 0).getDate();
+    const endDay = planEndDay != null ? Math.min(planEndDay, daysInEndMonth) : daysInEndMonth;
+
+    const startDate = new Date(year, monthIndex, startDay);
+    const endDate = new Date(endYear, endMonth, endDay);
+
     const dayList = [];
-    if (endDay >= startDay) {
-      for (let d = startDay; d <= endDay; d++) dayList.push({ day: d, monthOffset: 0 });
-    } else {
-      // Aydan aşaraq növbəti aya keçən aralıq
-      for (let d = startDay; d <= daysInMonth; d++) dayList.push({ day: d, monthOffset: 0 });
-      for (let d = 1; d <= endDay; d++) dayList.push({ day: d, monthOffset: 1 });
+    if (endDate >= startDate) {
+      const cursor = new Date(startDate);
+      while (cursor <= endDate) {
+        dayList.push({
+          day: cursor.getDate(),
+          month: cursor.getMonth(),
+          year: cursor.getFullYear(),
+          dateKey: `${cursor.getFullYear()}-${cursor.getMonth()}-${cursor.getDate()}`,
+        });
+        cursor.setDate(cursor.getDate() + 1);
+      }
     }
 
-    // Xüsusi günlər (Party və s.) — bu günlər rezerv olunur, AI/random
-    // ardıcıllıq onlara toxunmur. Qalan şəkil/video yalnız "boş" günlərə paylanır.
-    // specialDays açarı bu aralıqdaki "day" nömrəsinə uyğundur (ay daxilində).
-    const specialDaySet = new Set(dayList.filter((dl) => specialDays[dl.day] && dl.monthOffset === 0).map((dl) => dl.day));
-    const regularSlots = dayList.filter((dl) => !(dl.monthOffset === 0 && specialDaySet.has(dl.day)));
+    // Xüsusi günlər (Party və s.) — açar indi tam tarixə (dateKey) görədir,
+    // sadəcə "ayın günü" rəqəminə görə yox. Bu, eyni rəqəmli günün fərqli
+    // aylarda yanlışlıqla "xüsusi gün" sayılmasının qarşısını alır.
+    const specialDaySet = new Set(dayList.filter((dl) => specialDays[dl.dateKey]).map((dl) => dl.dateKey));
+    const regularSlots = dayList.filter((dl) => !specialDaySet.has(dl.dateKey));
 
     const counts = regularSlots.length > 0 ? distributeDays(seq.length, regularSlots.length) : [];
     const result = [];
@@ -2272,14 +2324,15 @@ export default function App() {
     let regularCursor = 0;
 
     dayList.forEach((dl) => {
-      const isSpecial = dl.monthOffset === 0 && specialDaySet.has(dl.day);
+      const isSpecial = specialDaySet.has(dl.dateKey);
       if (isSpecial) {
-        const sd = specialDays[dl.day];
+        const sd = specialDays[dl.dateKey];
         result.push({
           day: dl.day,
-          monthOffset: dl.monthOffset,
+          month: dl.month,
+          year: dl.year,
           posts: sd.caption ? [{
-            id: `special:${dl.day}`,
+            id: `special:${dl.dateKey}`,
             type: 'special',
             category: sd.label || 'Xüsusi gün',
             caption: sd.caption,
@@ -2290,7 +2343,7 @@ export default function App() {
         });
       } else {
         const c = counts[regularCursor] || 0;
-        result.push({ day: dl.day, monthOffset: dl.monthOffset, posts: seq.slice(idx, idx + c) });
+        result.push({ day: dl.day, month: dl.month, year: dl.year, posts: seq.slice(idx, idx + c) });
         idx += c;
         regularCursor++;
       }
@@ -2307,7 +2360,7 @@ export default function App() {
       setPublished(new Set());
     }
     addToast('Plan yaradıldı', 'success');
-  }, [photos, carousels, captionsMap, year, monthIndex, addToast, profilePrefix, specialDays, uiLang, planStartDay, planEndDay]);
+  }, [photos, carousels, captionsMap, year, monthIndex, addToast, profilePrefix, specialDays, uiLang, planStartDay, planEndDay, planEndMonth, planEndYear]);
 
   const togglePublished = useCallback((postId) => {
     setPublished((prev) => {
@@ -2406,13 +2459,15 @@ export default function App() {
   }, []);
 
   // Postu bir gündən başqa bir günə köçürür (məs. ayın 7-dən 16-na)
-  const handleMovePostToDay = useCallback((postId, fromDay, toDay) => {
-    if (fromDay === toDay) return;
+  const handleMovePostToDay = useCallback((postId, fromDay, toDay, fromMonth, fromYear, toMonth, toYear) => {
+    if (fromDay === toDay && fromMonth === toMonth && fromYear === toYear) return;
     setSchedule((prev) => {
       if (!prev) return prev;
       let movedPost = null;
+      const matchesFrom = (day) => day.day === fromDay && (fromMonth == null || day.month === fromMonth) && (fromYear == null || day.year === fromYear);
+      const matchesTo = (day) => day.day === toDay && (toMonth == null || day.month === toMonth) && (toYear == null || day.year === toYear);
       const withoutPost = prev.map((day) => {
-        if (day.day !== fromDay) return day;
+        if (!matchesFrom(day)) return day;
         const idx = day.posts.findIndex((p) => p.id === postId);
         if (idx === -1) return day;
         const posts = [...day.posts];
@@ -2421,7 +2476,7 @@ export default function App() {
       });
       if (!movedPost) return prev;
       return withoutPost.map((day) => {
-        if (day.day !== toDay) return day;
+        if (!matchesTo(day)) return day;
         return { ...day, posts: [...day.posts, movedPost] };
       });
     });
@@ -3209,6 +3264,63 @@ export default function App() {
             )}
 
             <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
+              <h3 className="menu-font text-base font-semibold mb-3">{uiLang === 'ru' ? 'Диапазон плана' : 'Plan tarix aralığı'}</h3>
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'Начало — месяц' : 'Başlanğıc — ay'}</label>
+                  <select value={monthIndex} onChange={(e) => setMonthIndex(parseInt(e.target.value))}
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200">
+                    {(uiLang === 'ru' ? MONTHS_RU : MONTHS).map((m, i) => <option key={m} value={i}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'Год' : 'İl'}</label>
+                  <input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value) || year)}
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-24 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
+                </div>
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'С числа' : 'Neçəsindən'}</label>
+                  <input type="number" min={1} max={31} value={planStartDay}
+                    onChange={(e) => setPlanStartDay(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-end gap-3 mt-3 pt-3 border-t border-stone-100 dark:border-stone-700">
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'Конец — месяц' : 'Son — ay'}</label>
+                  <select value={planEndMonth != null ? planEndMonth : monthIndex} onChange={(e) => setPlanEndMonth(parseInt(e.target.value))}
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200">
+                    {(uiLang === 'ru' ? MONTHS_RU : MONTHS).map((m, i) => <option key={m} value={i}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'Год' : 'İl'}</label>
+                  <input type="number" value={planEndYear != null ? planEndYear : year}
+                    onChange={(e) => setPlanEndYear(parseInt(e.target.value) || year)}
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-24 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
+                </div>
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'По число' : 'Neçəsinə qədər'}</label>
+                  <input type="number" min={1} max={31}
+                    value={planEndDay != null ? planEndDay : new Date(planEndYear != null ? planEndYear : year, (planEndMonth != null ? planEndMonth : monthIndex) + 1, 0).getDate()}
+                    onChange={(e) => setPlanEndDay(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
+                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
+                </div>
+                <button
+                  onClick={() => { setPlanEndMonth(null); setPlanEndYear(null); setPlanEndDay(null); setPlanStartDay(1); }}
+                  className="text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 underline-offset-2 hover:underline"
+                >
+                  {uiLang === 'ru' ? 'Сбросить (весь месяц)' : 'Sıfırla (bütün ay)'}
+                </button>
+              </div>
+              <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-2">
+                {uiLang === 'ru'
+                  ? 'Например: начало 29 Июнь, конец 30 Июль — план растянется на оба месяца.'
+                  : 'Məsələn: başlanğıc 29 İyun, son 30 İyul — plan hər iki ayı əhatə edəcək.'}
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
               <h3 className="menu-font text-lg font-semibold mb-1">
                 {uiLang === 'ru' ? '🎉 Особые дни' : '🎉 Xüsusi günlər'}
               </h3>
@@ -3218,84 +3330,102 @@ export default function App() {
                   : 'Party və ya xüsusi tədbir olan günləri işarələ. Bu günlərə təsadüfi şəkil düşməyəcək — yalnız yazdığın mətn (caption) görünəcək.'}
               </p>
               {(() => {
-                const daysInSelectedMonth = new Date(year, monthIndex + 1, 0).getDate();
-                const dayNums = Array.from({ length: daysInSelectedMonth }, (_, i) => i + 1);
+                // Yuxarıda seçilmiş tarix aralığını (başlanğıc/son, iki ay
+                // ola bilər) tam Date əsasında hesablayırıq — eyni dateKey
+                // sistemi generateSchedule-də də istifadə olunur ki, xüsusi
+                // gün seçimi ilə plan generasiyası tam üst-üstə düşsün.
+                const endMonthCalc = planEndMonth != null ? planEndMonth : monthIndex;
+                const endYearCalc = planEndYear != null ? planEndYear : year;
+                const daysInStartMonth = new Date(year, monthIndex + 1, 0).getDate();
+                const startDayCalc = Math.max(1, Math.min(planStartDay, daysInStartMonth));
+                const daysInEndMonth = new Date(endYearCalc, endMonthCalc + 1, 0).getDate();
+                const endDayCalc = planEndDay != null ? Math.min(planEndDay, daysInEndMonth) : daysInEndMonth;
+                const startDateCalc = new Date(year, monthIndex, startDayCalc);
+                const endDateCalc = new Date(endYearCalc, endMonthCalc, endDayCalc);
+
+                const calendarDays = [];
+                if (endDateCalc >= startDateCalc) {
+                  const cursor = new Date(startDateCalc);
+                  while (cursor <= endDateCalc) {
+                    calendarDays.push({
+                      day: cursor.getDate(),
+                      month: cursor.getMonth(),
+                      year: cursor.getFullYear(),
+                      dateKey: `${cursor.getFullYear()}-${cursor.getMonth()}-${cursor.getDate()}`,
+                    });
+                    cursor.setDate(cursor.getDate() + 1);
+                  }
+                }
+                const monthsList = uiLang === 'ru' ? MONTHS_RU : MONTHS;
+                // Aralıq 2 fərqli aya düşürsə, hər gün düyməsinin altında kiçik ay qısaltması göstəririk
+                const spansMultipleMonths = calendarDays.length > 0 &&
+                  (calendarDays[0].month !== calendarDays[calendarDays.length - 1].month ||
+                   calendarDays[0].year !== calendarDays[calendarDays.length - 1].year);
+
                 return (
                   <div className="grid grid-cols-7 gap-1.5 mb-3">
-                    {dayNums.map((d) => {
-                      const isSpecial = !!specialDays[d];
+                    {calendarDays.map((dl) => {
+                      const isSpecial = !!specialDays[dl.dateKey];
                       return (
                         <button
-                          key={d}
+                          key={dl.dateKey}
                           onClick={() => {
-                            if (isSpecial) removeSpecialDay(d);
-                            else setSpecialDay(d, uiLang === 'ru' ? 'Party' : 'Party', '');
+                            if (isSpecial) removeSpecialDay(dl.dateKey);
+                            else setSpecialDay(dl.dateKey, 'Party', '');
                           }}
-                          className={`text-xs rounded-lg py-1.5 border transition-colors ${isSpecial ? 'bg-orange-100 border-orange-400 text-orange-700 dark:bg-orange-950/40 dark:border-orange-600 dark:text-orange-400' : 'bg-white border-stone-200 text-stone-500 hover:border-stone-300 dark:bg-stone-900 dark:border-stone-700 dark:text-stone-400'}`}
+                          className={`text-xs rounded-lg py-1.5 border transition-colors flex flex-col items-center leading-tight ${isSpecial ? 'bg-orange-100 border-orange-400 text-orange-700 dark:bg-orange-950/40 dark:border-orange-600 dark:text-orange-400' : 'bg-white border-stone-200 text-stone-500 hover:border-stone-300 dark:bg-stone-900 dark:border-stone-700 dark:text-stone-400'}`}
                         >
-                          {d}
+                          <span>{dl.day}</span>
+                          {spansMultipleMonths && <span className="text-[8px] opacity-70">{monthsList[dl.month]?.slice(0, 3)}</span>}
                         </button>
                       );
                     })}
                   </div>
                 );
               })()}
+              <p className="text-[11px] text-stone-400 dark:text-stone-500 mb-2">
+                {uiLang === 'ru'
+                  ? 'Показаны только дни в пределах выбранного диапазона плана (см. выше). Если изменишь диапазон, список дней обновится.'
+                  : 'Yalnız yuxarıda seçdiyin plan tarix aralığındaki günlər göstərilir. Aralığı dəyişsən, bu siyahı da yenilənəcək.'}
+              </p>
               {Object.keys(specialDays).length > 0 && (
                 <div className="space-y-2 pt-2 border-t border-stone-100 dark:border-stone-700">
                   {Object.entries(specialDays)
-                    .map(([d, v]) => [parseInt(d, 10), v])
-                    .sort((a, b) => a[0] - b[0])
-                    .map(([d, v]) => (
-                      <div key={d} className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-mono text-stone-400 dark:text-stone-500 w-6 flex-shrink-0">{d}.</span>
-                        <input
-                          value={v.label}
-                          onChange={(e) => setSpecialDay(d, e.target.value, v.caption)}
-                          placeholder={uiLang === 'ru' ? 'Название (напр. Party)' : 'Ad (məs. Party)'}
-                          className="text-xs border border-stone-200 dark:border-stone-700 rounded-md px-2 py-1 w-32 dark:bg-stone-900 dark:text-stone-200"
-                        />
-                        <input
-                          value={v.caption}
-                          onChange={(e) => setSpecialDay(d, v.label, e.target.value)}
-                          placeholder={uiLang === 'ru' ? 'Подпись (напр. DJ Vugarixx)' : 'Caption (məs. DJ Vugarixx bu axşam)'}
-                          className="text-xs border border-stone-200 dark:border-stone-700 rounded-md px-2 py-1 flex-1 min-w-[160px] dark:bg-stone-900 dark:text-stone-200"
-                        />
-                        <button onClick={() => removeSpecialDay(d)} className="text-stone-300 hover:text-red-400 flex-shrink-0">
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
+                    .sort((a, b) => {
+                      const [ay, am, ad] = a[0].split('-').map(Number);
+                      const [by, bm, bd] = b[0].split('-').map(Number);
+                      return new Date(ay, am, ad) - new Date(by, bm, bd);
+                    })
+                    .map(([dateKey, v]) => {
+                      const [dy, dm, dd] = dateKey.split('-').map(Number);
+                      const monthsList = uiLang === 'ru' ? MONTHS_RU : MONTHS;
+                      return (
+                        <div key={dateKey} className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-mono text-stone-400 dark:text-stone-500 w-16 flex-shrink-0">{dd} {monthsList[dm]?.slice(0, 3)}</span>
+                          <input
+                            value={v.label}
+                            onChange={(e) => setSpecialDay(dateKey, e.target.value, v.caption)}
+                            placeholder={uiLang === 'ru' ? 'Название (напр. Party)' : 'Ad (məs. Party)'}
+                            className="text-xs border border-stone-200 dark:border-stone-700 rounded-md px-2 py-1 w-32 dark:bg-stone-900 dark:text-stone-200"
+                          />
+                          <input
+                            value={v.caption}
+                            onChange={(e) => setSpecialDay(dateKey, v.label, e.target.value)}
+                            placeholder={uiLang === 'ru' ? 'Подпись (напр. DJ Vugarixx)' : 'Caption (məs. DJ Vugarixx bu axşam)'}
+                            className="text-xs border border-stone-200 dark:border-stone-700 rounded-md px-2 py-1 flex-1 min-w-[160px] dark:bg-stone-900 dark:text-stone-200"
+                          />
+                          <button onClick={() => removeSpecialDay(dateKey)} className="text-stone-300 hover:text-red-400 flex-shrink-0">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </div>
 
             <div className="bg-white rounded-2xl border border-stone-200 p-5 dark:bg-stone-900 dark:border-stone-700">
               <div className="flex flex-wrap items-end gap-3">
-                <div>
-                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{t('monthLabel')}</label>
-                  <select value={monthIndex} onChange={(e) => setMonthIndex(parseInt(e.target.value))}
-                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200">
-                    {(uiLang === 'ru' ? MONTHS_RU : MONTHS).map((m, i) => <option key={m} value={i}>{m}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{t('yearLabel')}</label>
-                  <input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value) || year)}
-                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-24 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
-                </div>
-                <div>
-                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'С числа' : 'Ayın neçəsindən'}</label>
-                  <input type="number" min={1} max={31} value={planStartDay}
-                    onChange={(e) => setPlanStartDay(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
-                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
-                </div>
-                <div>
-                  <label className="text-xs text-stone-500 block mb-1 dark:text-stone-400">{uiLang === 'ru' ? 'По число' : 'Neçəsinə qədər'}</label>
-                  <input type="number" min={1} max={31}
-                    value={planEndDay != null ? planEndDay : new Date(year, monthIndex + 1, 0).getDate()}
-                    onChange={(e) => setPlanEndDay(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
-                    className="border border-stone-200 rounded-lg px-3 py-2 text-sm w-20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200" />
-                </div>
                 <button onClick={generateSchedule} disabled={photos.length === 0}
                   className="bg-orange-600 text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 hover:bg-orange-700 disabled:opacity-50 shadow-md shadow-orange-600/20 transition-all hover:shadow-lg hover:shadow-orange-600/30">
                   <Calendar size={16} /> {t('generatePlanBtn')}
@@ -3311,11 +3441,6 @@ export default function App() {
                   </>
                 )}
               </div>
-              <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-2">
-                {uiLang === 'ru'
-                  ? 'Если "По число" меньше "С числа", план продолжится в следующем месяце (напр. с 26 по 10).'
-                  : 'Əgər "Neçəsinə qədər" rəqəmi "Ayın neçəsindən"dən kiçikdirsə, plan növbəti aya keçəcək (məs. 26-dan 10-na qədər).'}
-              </p>
 
               {photos.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-stone-100">
